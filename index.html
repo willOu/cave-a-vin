@@ -369,6 +369,49 @@ nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; back
 .photo-field .btns { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .photo-field .btn { color: var(--fg); display: inline-block; width: auto; }
 .photo-field input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+/* Tasting, pairing, scan, bilan */
+.taste { display: grid; gap: 10px; margin-top: 10px; }
+.rate { display: flex; gap: 2px; }
+.rate button { border: 0; background: none; font-size: 1.7rem; line-height: 1; padding: 2px 4px; color: var(--line); cursor: pointer; }
+.rate button.on { color: var(--gold); }
+.taste-box { margin: 6px 0 10px; } .taste-box summary { cursor: pointer; color: var(--gold); font-size: .9rem; }
+.stars { color: var(--gold); letter-spacing: 1px; font-size: .85rem; white-space: nowrap; } .stars .off { color: var(--line); }
+.hist .hrow { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; padding: 8px 2px; font-weight: 400; font-size: .88rem; }
+.hist .hrow:hover { background: var(--gold-faint); }
+.hrow .hnote { display: block; color: var(--muted); font-size: .8rem; font-style: italic; }
+.hrow .hadd { font-size: .75rem; }
+.pair { border: 1px solid var(--gold-soft); border-radius: var(--radius); padding: 14px; background: linear-gradient(180deg, var(--gold-faint), transparent); display: grid; gap: 10px; }
+.pair-f { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.pair-f label { flex: 1 1 260px; display: grid; gap: 6px; }
+.pair-tip { margin: 0; font-family: var(--f-display); font-style: italic; font-size: 1.05rem; }
+.pair-picks { display: grid; gap: 10px; }
+.pick-card { display: grid; grid-template-columns: auto 1fr; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.pick-card h3 { margin: 0; font-size: 1rem; display: flex; gap: 8px; align-items: center; } .pick-card p { margin: 6px 0; font-size: .9rem; }
+.pick-card .rank { font: italic 1.8rem/1 var(--f-display); color: var(--gold); }
+.pair-wait { animation: pulse 1.4s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .45; } }
+.scanbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.scanbtn { display: inline-flex; gap: 6px; align-items: center; color: var(--fg); }
+.scanmsg { flex: 1 1 100%; font-size: .85rem; color: var(--muted); } .scanmsg:empty { display: none; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+input.filled, select.filled { border-color: var(--gold); }
+#view-bilan .bilan { display: grid; gap: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--gold-soft); border-radius: var(--radius); padding: 14px; display: grid; gap: 2px; background: var(--surface); }
+.tile .tv { font: italic 1.9rem/1.1 var(--f-display); color: var(--fg); } .tile .tl { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); } .tile .ts { font-size: .78rem; color: var(--muted); }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--surface); display: grid; gap: 10px; align-content: start; }
+.card h2 { margin: 0; font-size: 1.15rem; }
+.hbars { display: grid; gap: 8px; }
+.hb { display: grid; grid-template-columns: minmax(110px, 46%) 1fr 3ch; gap: 10px; align-items: center; font-size: .85rem; }
+.hb .hl { display: flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb .track { height: 10px; } .hb .bar { display: block; height: 100%; background: var(--gold); border-radius: 0 4px 4px 0; min-width: 2px; }
+.hb .hv { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg); }
+.cols { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 160px; align-items: end; }
+.col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; align-items: end; justify-items: center; gap: 4px; }
+.col .cb { width: 70%; max-width: 28px; background: var(--gold); border-radius: 4px 4px 0 0; min-height: 0; align-self: end; }
+.col .cv { font-size: .72rem; color: var(--fg); font-variant-numeric: tabular-nums; } .col .cl { font-size: .66rem; color: var(--muted); text-transform: capitalize; }
+@media (min-width: 760px) { #view-bilan .bilan { grid-template-columns: 1fr 1fr; } #view-bilan .tiles, #view-bilan .wide { grid-column: 1 / -1; } }
+@media (min-width: 1000px) { #view-cave > #pair { grid-column: 1 / -1; } }
+@media (max-width: 420px) { nav.tabs { gap: 2px; padding: 6px 8px; } nav.tabs button { padding: 9px 8px; letter-spacing: .1em; } nav.tabs .plus { margin-inline: 2px; } }
 /* ---------- Desktop / large screens (William, 2026-11-01): same app, layout adapts ---------- */
 @media (min-width: 1000px) {
   .wrap { max-width: 1280px; padding-left: 32px; padding-right: 32px; }
@@ -410,6 +453,7 @@ nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; back
   <button id="tab-cave" role="tab" aria-selected="true" data-view="cave">Cave</button>
   <button id="tab-inv" role="tab" aria-selected="false" data-view="inventaire">Vins</button>
   <button id="nav-add" class="plus" aria-label="Ajouter un vin">+</button>
+  <button id="tab-stats" role="tab" aria-selected="false" data-view="bilan">Bilan</button>
   <button id="tab-set" role="tab" aria-selected="false" data-view="reglages">Réglages</button>
 </nav>
 
@@ -427,6 +471,11 @@ nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; back
       <button id="btn-add-rack">Régler les casiers</button>
     </div>
     <div id="banner"></div>
+    <section class="pair" id="pair" hidden>
+      <form id="pair-f" class="pair-f"><label for="pair-q" class="grow"><span class="label">Que boire ce soir ?</span><input id="pair-q" placeholder="Un plat, une occasion… ex. gigot d'agneau, apéritif entre amis" autocomplete="off"></label>
+        <button class="primary" type="submit" id="pair-go">Trouver la bouteille</button><button type="button" id="pair-stop" hidden>Arrêter</button></form>
+      <div id="pair-out" aria-live="polite"></div>
+    </section>
     <div id="racks" style="display:grid;gap:16px"></div>
     <div id="soon"></div>
   </section>
@@ -451,6 +500,8 @@ nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; back
       <div class="hist" id="hist"></div>
     </div>
   </section>
+
+  <section id="view-bilan" hidden></section>
 
   <section id="view-reglages" hidden style="display:grid;gap:16px">
     <div class="toolbar">
@@ -498,7 +549,7 @@ const townLabel = o => o.town + (o.townDep ? " (" + o.townDep + ")" : "");
 /* What the map shows: bottles in the cellar, or every bottle drunk so far */
 function mapItems() {
   if (S.mapMode === "bues") return S.drunkAll.map(d => { const w = S.wines.find(x => x.id === d.wineId) || {};
-    const t = hasTown(d) ? d : w; return { n: 1, bassin: d.bassin || bassinOf({ ...w, ...d, bassin: d.bassin || w.bassin }), town: t.town, townDep: t.townDep, lat: t.lat, lon: t.lon, name: d.name, vintage: d.vintage, color: d.color, at: d.at, domain: d.domain || w.domain }; });
+    const t = hasTown(d) ? d : w; return { n: 1, bassin: d.bassin || bassinOf({ ...w, ...d, bassin: d.bassin || w.bassin }), town: t.town, townDep: t.townDep, lat: t.lat, lon: t.lon, name: d.name, vintage: d.vintage, color: d.color, at: d.at, domain: d.domain || w.domain, id: d.id, rating: d.rating, dish: d.dish, note: d.note }; });
   return S.wines.filter(w => count(w)).map(w => ({ n: count(w), bassin: bassinOf(w), town: w.town, townDep: w.townDep, lat: w.lat, lon: w.lon, name: w.name, vintage: w.vintage, color: w.color, domain: w.domain, id: w.id }));
 }
 function renderMap() {
@@ -527,7 +578,7 @@ function renderMap() {
   if (!nTown && items.length) note += ` Indiquez la ville du producteur sur la fiche d'un vin pour le voir apparaître sur la carte.`;
   let drunkList = "";
   if (bues && filt) { const ls = items.filter(it => S.town ? hasTown(it) && townKey(it) === S.town : it.bassin === S.bassin).sort((a, b) => (b.at || "").localeCompare(a.at || ""));
-    drunkList = `<div class="hist map-drunk">${ls.map(d => `<div><time>${esc(d.at ? new Date(d.at).toLocaleDateString("fr-FR") : "")}</time><span class="dot c-${d.color || "autre"}"></span><span>${esc(d.name)} ${esc(d.vintage || "")}${d.domain ? ` <span class="muted">· ${esc(d.domain)}</span>` : ""}</span></div>`).join("") || `<span class="muted">Rien ici.</span>`}</div>`; }
+    drunkList = `<div class="hist map-drunk">${ls.map(histRow).join("") || `<span class="muted">Rien ici.</span>`}</div>`; }
   box.innerHTML = `<div class="seg mapseg" role="group" aria-label="Ce que montre la carte"><button data-mm="cave" aria-pressed="${!bues}">En cave</button><button data-mm="bues" aria-pressed="${bues}">Bues depuis le début</button></div>
     <svg viewBox="-20 -20 ${GEO.w + 40} ${GEO.h + 40}" role="group" aria-label="Carte de France des vins"><path class="fr" d="${GEO.fr}"></path>${paths}${labels}<g class="towns${bues ? " bues" : ""}">${dots}</g></svg>
     <p class="muted map-note">${note}</p>${drunkList}`;
@@ -535,6 +586,7 @@ function renderMap() {
   const wire = (sel, attr, key) => box.querySelectorAll(sel).forEach(p => { const go = () => { const v = p.getAttribute(attr); if (key === "bassin") { S.bassin = S.bassin === v ? null : v; S.town = null; } else { S.town = S.town === v ? null : v; S.bassin = null; } renderInventory(); };
     p.onclick = go; p.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
   wire("[data-b]", "data-b", "bassin"); wire("[data-t]", "data-t", "town");
+  box.querySelectorAll("[data-dk]").forEach(b => b.onclick = () => openTasting(b.dataset.dk));
   $("#map-clear") && ($("#map-clear").onclick = () => { S.bassin = null; S.town = null; renderInventory(); });
 }
 /* Find which bassin a point falls in, using the map's own shapes */
@@ -613,10 +665,11 @@ function render() {
   $("#view-cave").hidden = S.view !== "cave";
   $("#view-inventaire").hidden = S.view !== "inventaire";
   $("#view-reglages").hidden = S.view !== "reglages";
+  $("#view-bilan").hidden = S.view !== "bilan";
   $("#summary").hidden = S.view === "reglages";
   document.querySelectorAll("nav.tabs button[data-view]").forEach(b => b.setAttribute("aria-selected", b.dataset.view === S.view));
   $("#cellar-name").textContent = cur()?.name || "Ma Cave";
-  renderSummary(); renderLegend(); renderBanner(); renderRacks(); renderInventory(); renderCellars();
+  renderSummary(); renderLegend(); renderBanner(); renderRacks(); renderInventory(); renderCellars(); if (S.view === "bilan") renderStats();
 }
 function renderCellars() {
   const root = $("#cellars");
@@ -1001,6 +1054,10 @@ function loop3D() {
   c.update(); T3.renderer.render(T3.scene, T3.camera);
 }
 
+function histRow(d) {
+  const extra = [d.dish ? "avec " + d.dish : "", d.note].filter(Boolean).join(" · ");
+  return `<button class="hrow" data-dk="${esc(d.id || "")}"><time>${esc(d.at ? new Date(d.at).toLocaleDateString("fr-FR") : "")}</time><span class="dot c-${d.color || "autre"}"></span><span class="grow">${esc(d.name)} ${esc(d.vintage || "")}${d.domain ? ` <span class="muted">· ${esc(d.domain)}</span>` : ""}${extra ? `<span class="hnote">${esc(extra)}</span>` : ""}</span>${stars(+d.rating || 0) || `<span class="muted hadd">Noter</span>`}</button>`;
+}
 function renderInventory() {
   const f = $("#filters");
   const has = new Set(S.wines.filter(w => count(w)).map(w => w.color || "autre"));
@@ -1044,7 +1101,8 @@ function renderInventory() {
   list.querySelectorAll("[data-w]").forEach(b => b.onclick = () => openWine(b.dataset.w));
   const drunk = S.drunk.filter(d => !d.cellarId || d.cellarId === curId());
   $("#hist-clear").hidden = !S.drunkAll.length;
-  $("#hist").innerHTML = drunk.length ? drunk.slice(0, 10).map(d => `<div><time>${esc(new Date(d.at).toLocaleDateString("fr-FR"))}</time><span class="dot c-${d.color || "autre"}"></span><span>${esc(d.name)} ${esc(d.vintage || "")}</span></div>`).join("") : `<span class="muted">Rien pour l'instant. Quand vous sortez une bouteille avec « Bouteille bue », elle apparaît ici.</span>`;
+  setTimeout(() => document.querySelectorAll("#hist [data-dk]").forEach(b => b.onclick = () => openTasting(b.dataset.dk)));
+  $("#hist").innerHTML = drunk.length ? drunk.slice(0, 12).map(d => histRow(d)).join("") : `<span class="muted">Rien pour l'instant. Quand vous sortez une bouteille avec « Bouteille bue », elle apparaît ici.</span>`;
 }
 
 /* ---------- Long-press drag to move a bottle (Étagères and Plan views) ---------- */
@@ -1118,9 +1176,11 @@ function onCell(k) {
 function confirmDrink(w, k) {
   const box = document.querySelector(".sheet .actions"); if (!box) return;
   box.outerHTML = `<div class="banner" id="drink-confirm" role="alertdialog" aria-label="Confirmer"><p>Confirmez-vous avoir bu <strong>${esc(w.name)} ${esc(w.vintage || "")}</strong>${k ? ` (${esc(slotLabel(k))})` : " (non rangée)"} ? Elle sera retirée de la cave et notée dans l'historique.</p>
-    <button class="primary" id="dc-yes">Oui, bouteille bue</button><button id="dc-no">Non, annuler</button></div>`;
+    <details class="taste-box"><summary>Noter la dégustation (facultatif)</summary>${tastingFields("dc", {})}</details>
+    <div class="actions"><button class="primary" id="dc-yes">Oui, bouteille bue</button><button id="dc-no">Non, annuler</button></div></div>`;
+  wireTasting("dc");
   $("#dc-yes").focus();
-  $("#dc-yes").onclick = async () => { close(); await drink(w, k); };
+  $("#dc-yes").onclick = async () => { const t = readTasting("dc"); close(); await drink(w, k, t); };
   $("#dc-no").onclick = () => k ? openSlot(k, w) : openWine(w.id);
 }
 function openSlot(k, w) {
@@ -1148,11 +1208,36 @@ function facts(w) {
     ["Prix", w.price ? w.price + " €" : ""], ["Bouteilles", count(w) === total(w) ? count(w) : count(w) + " ici, " + total(w) + " au total"], ["Notes", w.notes]].filter(r => r[1] !== "" && r[1] != null);
   return `<dl class="facts">${rows.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>`;
 }
-async function drink(w, k) {
+/* Tasting notes on a drunk bottle: rating 1-5, dish, comment */
+const stars = n => n ? `<span class="stars" aria-label="${n} sur 5">${"★".repeat(n)}<span class="off">${"★".repeat(5 - n)}</span></span>` : "";
+function tastingFields(px, d) {
+  return `<div class="taste" id="${px}-taste" data-rating="${+d.rating || 0}">
+    <div class="rate" role="radiogroup" aria-label="Note">${[1, 2, 3, 4, 5].map(i => `<button type="button" role="radio" data-r="${i}" aria-checked="${(+d.rating || 0) === i}" aria-label="${i} sur 5" class="${i <= (+d.rating || 0) ? "on" : ""}">★</button>`).join("")}</div>
+    <label for="${px}-dish">Avec quel plat ?<input id="${px}-dish" value="${esc(d.dish || "")}" placeholder="ex. Côte de bœuf"></label>
+    <label for="${px}-note">Commentaire<textarea id="${px}-note" rows="2" placeholder="Nez, bouche, impressions…">${esc(d.note || "")}</textarea></label></div>`;
+}
+function wireTasting(px) {
+  const box = $("#" + px + "-taste"); if (!box) return;
+  box.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { const r = +b.dataset.r === +box.dataset.rating ? 0 : +b.dataset.r; box.dataset.rating = r;
+    box.querySelectorAll("[data-r]").forEach(x => { x.classList.toggle("on", +x.dataset.r <= r); x.setAttribute("aria-checked", String(+x.dataset.r === r)); }); });
+}
+const readTasting = px => ({ rating: +$("#" + px + "-taste").dataset.rating || 0, dish: $("#" + px + "-dish").value.trim(), note: $("#" + px + "-note").value.trim() });
+function openTasting(id) {
+  const d = S.drunkAll.find(x => x.id === id); if (!d) return;
+  sheet(`<header><span class="dot c-${d.color || "autre"}" style="width:18px;height:18px;margin-top:4px"></span><div><div class="label">Bue le ${esc(new Date(d.at).toLocaleDateString("fr-FR"))}${d.from ? " · " + esc(d.from) : ""}</div><h2>${esc(d.name)} ${esc(d.vintage || "")}</h2>${d.domain ? `<div class="muted">${esc(d.domain)}</div>` : ""}</div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    ${tastingFields("tn", d)}
+    <div class="actions"><button class="primary" id="tn-save">Enregistrer</button><button data-close>Annuler</button><button class="danger" id="tn-del" style="margin-left:auto">Retirer de l'historique</button></div><div id="tn-msg"></div>`, () => {
+    wireTasting("tn");
+    $("#tn-save").onclick = () => { const t = readTasting("tn"); close(); save(() => S.db.doc("drunk/" + d.id).update(t), "Dégustation enregistrée"); };
+    $("#tn-del").onclick = () => { $("#tn-msg").innerHTML = `<div class="banner"><p>Retirer cette bouteille de l'historique ? Le vin n'est pas remis en cave.</p><button class="danger" id="tn-del-ok">Retirer</button></div>`;
+      $("#tn-del-ok").onclick = () => { close(); save(() => S.db.doc("drunk/" + d.id).delete(), "Retirée de l'historique"); }; };
+  });
+}
+async function drink(w, k, t) {
   const ref = S.db && S.db.doc("wines/" + w.id);
   const patch = k ? { slots: (w.slots || []).filter(s => s !== k) } : { loose: Math.max(0, (+w.loose || 0) - 1) };
   const ok = await save(() => ref.update(patch), "Santé ! Bouteille retirée de la cave");
-  if (ok) S.db.collection("drunk").add({ cellarId: k ? slotCellar(k) : wineCellar(w), wineId: w.id, name: w.name, vintage: w.vintage || "", color: w.color || "autre", domain: w.domain || "", bassin: bassinOf(w) || "", ...(hasTown(w) ? { town: w.town, townDep: w.townDep || "", lat: w.lat, lon: w.lon } : {}), at: new Date().toISOString(), from: k ? slotLabel(k) : "non rangée" }).catch(() => {});
+  if (ok) S.db.collection("drunk").add({ cellarId: k ? slotCellar(k) : wineCellar(w), wineId: w.id, name: w.name, vintage: w.vintage || "", color: w.color || "autre", domain: w.domain || "", bassin: bassinOf(w) || "", ...(hasTown(w) ? { town: w.town, townDep: w.townDep || "", lat: w.lat, lon: w.lon } : {}), at: new Date().toISOString(), from: k ? slotLabel(k) : "non rangée", ...(t || {}) }).catch(() => {});
 }
 function openPlace(k) {
   const here = w => wineCellar(w) === curId();
@@ -1228,6 +1313,11 @@ function openWineForm(w, placeAt, focusPhoto) {
   const f = (id, label, type = "text", extra = "") => `<label for="${id}">${label}<input id="${id}" type="${type}" value="${esc(v[id.slice(2)] ?? "")}" ${extra}></label>`;
   sheet(`<header><div><h2>${w ? "Modifier le vin" : "Nouveau vin"}</h2>${placeAt ? `<div class="muted">Sera rangé en ${esc(slotLabel(placeAt))}</div>` : ""}</div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
     <form class="form" id="wf">
+      <div class="full scanbar">
+        ${S.sampleImg ? `<label class="btn scanbtn" for="f-scan" role="button" tabindex="0">📷 Scanner l'étiquette</label><input id="f-scan" type="file" accept="image/*" capture="environment" class="vh">` : ""}
+        <label class="btn scanbtn" for="f-bar" role="button" tabindex="0">▥ Code-barres</label><input id="f-bar" type="file" accept="image/*" capture="environment" class="vh">
+        <div id="f-scan-msg" class="scanmsg" aria-live="polite">${v.ean ? `Code-barres enregistré : ${esc(v.ean)}` : ""}</div>
+      </div>
       <label class="full" for="f-name">Nom du vin / cuvée *<input id="f-name" required value="${esc(v.name || "")}" placeholder="ex. Château Lagrange"></label>
       ${f("f-domain", "Domaine / producteur")}
       <label for="f-town" class="townfld"><span>Ville du producteur <span class="muted" id="f-town-hint" style="font-weight:400"></span></span><input id="f-town" autocomplete="off" value="${esc(v.town ? townLabel(v) : "")}" placeholder="ex. Pauillac" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-town-list"><div class="sugg" id="f-town-list" role="listbox" hidden></div></label>
@@ -1291,13 +1381,47 @@ function openWineForm(w, placeAt, focusPhoto) {
       };
       del.onclick = () => { photos[i] = null; photosTouched = true; prev.textContent = PHOTO_SLOTS[i]; del.hidden = true; btn.textContent = "Prendre / choisir"; fp.value = ""; };
     });
+    let ean = v.ean || "";
+    const msg = h => { $("#f-scan-msg").innerHTML = h; };
+    ["f-scan", "f-bar"].forEach(id => { const lb = document.querySelector(`label[for=${id}]`); if (lb) lb.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#" + id).click(); } }; });
+    $("#f-bar").onchange = async () => {
+      const file = $("#f-bar").files[0]; $("#f-bar").value = ""; if (!file) return;
+      msg("Lecture du code-barres…");
+      let code = ""; try { code = await decodeBarcode(file); } catch (e) { code = ""; }
+      if (!code) { msg("Aucun code-barres lisible. Cadrez-le de près, bien net, sans reflet."); return; }
+      const known = S.wines.find(x => x.ean === code && (!w || x.id !== w.id));
+      if (known) { msg(`Ce code-barres correspond à <strong>${esc(known.name)} ${esc(known.vintage || "")}</strong>, déjà dans votre cave. <button type="button" class="linkbtn" id="f-known">Ouvrir sa fiche</button>`);
+        $("#f-known").onclick = () => openWine(known.id); return; }
+      ean = code; msg(`Code-barres <strong>${esc(code)}</strong> enregistré avec ce vin : la prochaine fois, le scanner retrouvera sa fiche.${S.sampleImg ? " Pour remplir la fiche, scannez l'étiquette." : ""}`);
+    };
+    $("#f-scan") && ($("#f-scan").onchange = async () => {
+      const file = $("#f-scan").files[0]; $("#f-scan").value = ""; if (!file) return;
+      const ctl = new AbortController(); msg(`Claude lit l'étiquette… <button type="button" class="linkbtn" id="f-scan-stop">Arrêter</button>`); $("#f-scan-stop").onclick = () => ctl.abort();
+      let blob; try { blob = await shrinkPhoto(file, 1600); } catch (e) { msg("Cette image ne peut pas être lue."); return; }
+      try {
+        const r = await readLabel(blob, ctl.signal) || {}, filled = [];
+        const put = (id, val, label) => { val = String(val ?? "").trim(); if (!val) return; const el = $("#f-" + id); if (el.value.trim() && el.value.trim() !== val) return; el.value = val; el.classList.add("filled"); filled.push(label); };
+        put("name", r.nom || r.domaine, "nom"); put("domain", r.domaine, "domaine"); put("vintage", (String(r.millesime || "").match(/\d{4}/) || [""])[0], "millésime");
+        put("appellation", r.appellation, "appellation"); put("region", r.region, "région"); put("grapes", r.cepages, "cépages");
+        put("drinkFrom", (String(r.boire_a_partir || "").match(/\d{4}/) || [""])[0], "garde"); put("drinkUntil", (String(r.boire_avant || "").match(/\d{4}/) || [""])[0], "");
+        if (COLORS.some(c => c[0] === r.couleur) && !w) { $("#f-color").value = r.couleur; filled.push("couleur"); }
+        if (r.ville && !town) { try { await loadCommunes(); const m = findCommunes(r.ville, 1); if (m.length && norm(m[0].n).trim() === norm(r.ville).trim()) { town = { town: m[0].n, townDep: m[0].d, lat: m[0].lat, lon: m[0].lon }; $("#f-town").value = townLabel(town); $("#f-town-hint").textContent = "· placé sur la carte"; filled.push("ville"); } } catch (e) {} }
+        if (S.assets && $("#f-photo0") && !photos[0]) { photos[0] = blob; photosTouched = true; $("#f-prev0").innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="">`; $("#f-pdel0").hidden = false; $("#f-pbtn0").textContent = "Changer"; filled.push("photo"); }
+        autoB();
+        msg(filled.length ? `Rempli d'après l'étiquette : ${esc(filled.filter(Boolean).join(", "))}. Vérifiez avant d'enregistrer.` : "Rien de lisible sur cette photo. Essayez plus près, avec plus de lumière.");
+      } catch (er) {
+        if (er && er.code === "cancelled") msg("");
+        else if (sampleOff(er)) msg("La lecture d'étiquette n'est pas autorisée sur cette page.");
+        else msg(esc(sampleMsg(er)));
+      }
+    });
     if (focusPhoto && $("#f-photo0")) setTimeout(() => { const i = labelsOf(v).length ? 1 : 0; $("#f-pbtn" + i).scrollIntoView({ block: "center" }); $("#f-photo" + i).click(); }, 50);
     $("#wf").onsubmit = async e => {
       e.preventDefault();
       const g = id => $("#f-" + id).value.trim();
       const data = { name: g("name"), domain: g("domain"), vintage: g("vintage"), appellation: g("appellation"), region: g("region"), bassin: g("bassin"), color: g("color"),
         grapes: g("grapes"), drinkFrom: g("drinkFrom"), drinkUntil: g("drinkUntil"), price: g("price"), loose: Math.max(0, parseInt(g("loose")) || 0), notes: g("notes"),
-        town: town ? town.town : "", townDep: town ? town.townDep : "", lat: town ? town.lat : "", lon: town ? town.lon : "" };
+        town: town ? town.town : "", townDep: town ? town.townDep : "", lat: town ? town.lat : "", lon: town ? town.lon : "", ean };
       if (!data.name) return;
       const sub = $("#wf button[type=submit]");
       if (photosTouched) {
@@ -1365,6 +1489,114 @@ function openRackForm(rk, cellarId) {
   });
 }
 
+/* ---------- Claude on the page (sample): pairing and label reading ---------- */
+const SAMPLE_ERR = { rate_limited: "Trop de demandes pour l'instant, réessayez dans un moment.", session_expired: "Reconnectez-vous à claude.ai puis réessayez.",
+  image_rejected: "Cette photo ne passe pas, essayez-en une autre.", refused: "Claude n'a pas pu répondre à cette demande.", empty_completion: "Pas de réponse, reformulez.",
+  invalid_json: "Réponse illisible, réessayez.", upstream_error: "Connexion interrompue, réessayez.", prompt_too_large: "Trop de vins à analyser d'un coup." };
+const sampleMsg = e => SAMPLE_ERR[e && e.code] || "Indisponible pour l'instant.";
+const sampleOff = e => ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e && e.code);
+const wineLine = w => [w.id, w.name, w.vintage || "NM", colorLabel(w.color), w.domain, w.appellation, w.region, w.grapes, (w.drinkFrom || w.drinkUntil) ? "garde " + (w.drinkFrom || "?") + "-" + (w.drinkUntil || "?") : "", count(w) + " btl"].filter(Boolean).join(" | ");
+let pairCtl = null;
+function wirePairing() {
+  const sec = $("#pair"); sec.hidden = !S.sample;
+  if (!S.sample) return;
+  $("#pair-stop").onclick = () => pairCtl && pairCtl.abort();
+  $("#pair-f").onsubmit = async e => {
+    e.preventDefault();
+    const q = $("#pair-q").value.trim(), out = $("#pair-out"); if (!q) { $("#pair-q").focus(); return; }
+    const ws = S.wines.filter(w => count(w) > 0);
+    if (!ws.length) { out.innerHTML = `<p class="muted">Ajoutez d'abord des vins dans cette cave.</p>`; return; }
+    pairCtl = new AbortController(); $("#pair-go").disabled = true; $("#pair-stop").hidden = false;
+    out.innerHTML = `<p class="muted pair-wait">Claude parcourt votre cave…</p>`;
+    const prompt = `Tu es sommelier. L'utilisateur demande quoi boire avec : « ${q} ».
+Voici les vins disponibles dans sa cave (un par ligne : id | nom | millésime | couleur | domaine | appellation | région | cépages | fenêtre de garde | nombre de bouteilles). Nous sommes en ${YEAR}.
+${ws.map(wineLine).join("\n")}
+
+Choisis au plus 3 vins de cette liste qui s'accordent le mieux, du meilleur au moins bon. Préfère les vins dans leur fenêtre de garde ou à boire vite, évite ceux qui doivent encore attendre sauf s'il n'y a rien d'autre. N'invente aucun vin : utilise uniquement les id de la liste.
+Réponds uniquement en JSON, en français : {"conseil": "une phrase sur le style de vin idéal pour ce plat", "choix": [{"id": "id exact", "pourquoi": "une ou deux phrases"}]}. Si aucun vin ne convient, renvoie "choix": [] et explique dans "conseil" quoi acheter.`;
+    try {
+      const r = await S.sample.json(prompt, { signal: pairCtl.signal });
+      const picks = (Array.isArray(r && r.choix) ? r.choix : []).map(c => ({ w: S.wines.find(x => x.id === c.id), why: c.pourquoi })).filter(c => c.w).slice(0, 3);
+      out.innerHTML = `${r && r.conseil ? `<p class="pair-tip">${esc(r.conseil)}</p>` : ""}${picks.length ? `<div class="pair-picks">${picks.map((c, i) => { const w = c.w, d = drinkState(w);
+        const locs = slotsIn(w, curId()).sort().map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("");
+        return `<article class="pick-card"><span class="rank">${i + 1}</span><div><h3><span class="dot c-${w.color || "autre"}"></span>${esc(w.name)} ${esc(w.vintage || "")}</h3>
+          <div class="muted">${esc([w.domain, w.appellation].filter(Boolean).join(" · "))}</div>${d ? `<span class="pill ${d[0]}">${d[1]}</span>` : ""}
+          <p>${esc(c.why || "")}</p><div class="chips">${locs}${slotsIn(w, curId()).length ? `<button class="linkbtn" data-show="${w.id}">Voir dans la cave</button>` : ""}<button class="linkbtn" data-open="${w.id}">Fiche</button></div></div></article>`; }).join("")}</div>` : `<p class="muted">Aucun vin de la cave ne s'impose pour ce plat.</p>`}`;
+      out.querySelectorAll("[data-show]").forEach(b => b.onclick = () => { S.highlight = b.dataset.show; S.move = null; renderRacks(); $("#racks").scrollIntoView({ behavior: "smooth", block: "start" }); });
+      out.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openWine(b.dataset.open));
+    } catch (er) {
+      if (er && er.code === "cancelled") out.innerHTML = "";
+      else if (sampleOff(er)) { out.innerHTML = ""; sec.hidden = true; toast("Les suggestions de Claude ne sont pas autorisées sur cette page."); }
+      else out.innerHTML = `<p class="muted">${esc(sampleMsg(er))}</p>`;
+    } finally { $("#pair-go").disabled = false; $("#pair-stop").hidden = true; pairCtl = null; }
+  };
+}
+/* Read a label photo and return wine fields */
+async function readLabel(blob, signal) {
+  const prompt = `Voici la photo de l'étiquette (ou de la contre-étiquette) d'une bouteille de vin. Lis-la et extrais les informations visibles. N'invente rien : laisse "" ce qui n'est pas lisible ou pas certain, sauf "couleur" et "garde" que tu peux estimer d'après l'appellation.
+Réponds uniquement en JSON : {"nom": "nom du vin ou de la cuvée", "domaine": "domaine, château ou producteur", "millesime": "année sur 4 chiffres", "appellation": "", "region": "région viticole", "ville": "commune du producteur si elle est écrite (souvent après 'mis en bouteille à' ou dans l'adresse)", "couleur": "rouge|blanc|rose|bulles|liquoreux|autre", "cepages": "", "boire_a_partir": "année", "boire_avant": "année"}`;
+  return await S.sample.json(prompt, { images: [blob], signal });
+}
+/* ---------- Barcode (EAN) from a photo ---------- */
+let ZX_P = null;
+async function decodeBarcode(file) {
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if ("BarcodeDetector" in window && bmp) {
+    try { const det = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "qr_code"] });
+      const r = await det.detect(bmp); if (r && r[0]) return r[0].rawValue; } catch (e) {}
+  }
+  if (!ZX_P) ZX_P = loadScript("https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js").catch(e => { ZX_P = null; throw e; });
+  await ZX_P;
+  const Z = window.ZXing, blob = await shrinkPhoto(file, 1600), img = await createImageBitmap(blob);
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; c.getContext("2d").drawImage(img, 0, 0);
+  const hints = new Map(); hints.set(Z.DecodeHintType.TRY_HARDER, true);
+  const rd = new Z.MultiFormatReader(); rd.setHints(hints);
+  for (const rot of [0, 1]) {
+    let cv = c; if (rot) { cv = document.createElement("canvas"); cv.width = c.height; cv.height = c.width; const x = cv.getContext("2d"); x.translate(cv.width, 0); x.rotate(Math.PI / 2); x.drawImage(c, 0, 0); }
+    try { const src = new Z.HTMLCanvasElementLuminanceSource(cv); return rd.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src))).getText(); } catch (e) {}
+  }
+  return "";
+}
+/* ---------- Bilan ---------- */
+function hbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.n)), tot = rows.reduce((a, r) => a + r.n, 0);
+  return `<div class="hbars">${rows.map(r => `<div class="hb" title="${esc(r.label)} : ${r.n}${opts.unit || ""} (${Math.round(100 * r.n / Math.max(1, tot))} %)"><span class="hl">${r.dot ? `<span class="dot c-${r.dot}"></span>` : ""}${esc(r.label)}</span><span class="track"><span class="bar" style="width:${(100 * r.n / max).toFixed(1)}%${r.color ? ";background:" + r.color : ""}"></span></span><span class="hv">${r.n}${opts.unit || ""}</span></div>`).join("")}</div>`;
+}
+function renderStats() {
+  const root = $("#view-bilan"); if (!root) return;
+  if (!S.ready) { root.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "Chargement…"}</div>`; return; }
+  const cid = curId(), ws = S.wines.map(w => ({ w, n: count(w) })).filter(x => x.n > 0);
+  const btl = ws.reduce((a, x) => a + x.n, 0), priced = ws.filter(x => +x.w.price > 0);
+  const value = priced.reduce((a, x) => a + x.n * +x.w.price, 0), pricedN = priced.reduce((a, x) => a + x.n, 0);
+  const eur = v => v.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: v >= 1000 ? 0 : 2 });
+  const drunk = S.drunkAll.filter(d => !d.cellarId || d.cellarId === cid), rated = drunk.filter(d => +d.rating > 0);
+  const avg = rated.length ? (rated.reduce((a, d) => a + +d.rating, 0) / rated.length) : 0;
+  const by = (f) => { const m = new Map(); for (const x of ws) { const k = f(x.w); m.set(k, (m.get(k) || 0) + x.n); } return m; };
+  const colors = COLORS.map(([c, l]) => ({ label: l, n: by(w => w.color || "autre").get(c) || 0, dot: c, color: `var(--w-${c})` })).filter(r => r.n);
+  const bas = [...by(w => bassinOf(w) || "").entries()].map(([b, n]) => ({ label: b ? bassinName(b, true) : "Non précisé", n })).sort((a, b) => b.n - a.n);
+  const dec = [...by(w => +w.vintage ? Math.floor(+w.vintage / 10) * 10 : 0).entries()].sort((a, b) => (a[0] || 9999) - (b[0] || 9999)).map(([d, n]) => ({ label: d ? "Années " + d : "Sans millésime", n }));
+  const st = { now: 0, late: 0, wait: 0, none: 0 }; for (const x of ws) { const d = drinkState(x.w); st[d ? d[0] : "none"] += x.n; }
+  const garde = [{ label: "À boire maintenant", n: st.now, color: "var(--ok)" }, { label: "À boire vite", n: st.late, color: "var(--warn)" }, { label: "À garder", n: st.wait }, { label: "Garde non renseignée", n: st.none, color: "var(--line)" }].filter(r => r.n);
+  // last 12 months of drunk bottles
+  const now = new Date(), months = [];
+  for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), n: 0, label: d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "") }); }
+  for (const d of drunk) { const t = new Date(d.at); const mm = months.find(x => x.y === t.getFullYear() && x.m === t.getMonth()); if (mm) mm.n++; }
+  const mmax = Math.max(1, ...months.map(x => x.n)), year12 = months.reduce((a, x) => a + x.n, 0);
+  const cols = `<div class="cols" role="img" aria-label="Bouteilles bues par mois sur 12 mois">${months.map(x => `<div class="col" title="${esc(x.label + " " + x.y)} : ${x.n} bouteille(s)"><span class="cv">${x.n || ""}</span><span class="cb" style="height:${(100 * x.n / mmax).toFixed(1)}%"></span><span class="cl">${esc(x.label)}</span></div>`).join("")}</div>`;
+  const best = [...rated].sort((a, b) => +b.rating - +a.rating || (b.at || "").localeCompare(a.at || "")).slice(0, 5);
+  const tile = (v, l, sub) => `<div class="tile"><span class="tv">${v}</span><span class="tl">${l}</span>${sub ? `<span class="ts">${sub}</span>` : ""}</div>`;
+  root.innerHTML = `<div class="bilan">
+    <div class="tiles">${tile(btl, "bouteilles en cave")}${tile(pricedN ? eur(value) : "—", "valeur estimée", pricedN < btl ? `${btl - pricedN} bouteille(s) sans prix` : "")}${tile(pricedN ? eur(value / pricedN) : "—", "prix moyen")}${tile(drunk.length, "bouteilles bues", avg ? `note moyenne ${avg.toFixed(1)}/5` : "")}</div>
+    ${btl ? `<section class="card"><h2>Par couleur</h2>${hbars(colors)}</section>
+    <section class="card"><h2>Garde</h2>${hbars(garde)}</section>
+    <section class="card"><h2>Par bassin</h2>${hbars(bas)}</section>
+    <section class="card"><h2>Par millésime</h2>${hbars(dec)}</section>` : `<div class="empty">Cette cave est vide.</div>`}
+    <section class="card wide"><h2>Bouteilles bues par mois <span class="muted">· ${year12} sur 12 mois</span></h2>${cols}</section>
+    ${best.length ? `<section class="card wide"><h2>Vos meilleures dégustations</h2><div class="hist">${best.map(histRow).join("")}</div></section>` : ""}
+  </div>`;
+  root.querySelectorAll("[data-dk]").forEach(b => b.onclick = () => openTasting(b.dataset.dk));
+}
+
 /* ---------- Wiring ---------- */
 $("#nav-add").onclick = () => openWineForm(null);
 document.querySelectorAll("nav.tabs button[data-view]").forEach(b => b.onclick = () => { S.view = b.dataset.view; try { localStorage.setItem("cave.view", S.view); } catch (e) {} render(); });
@@ -1392,7 +1624,7 @@ $("#hist-clear").onclick = () => {
 $("#q").oninput = e => { S.q = e.target.value; renderInventory(); };
 $("#sort").onchange = e => { S.sort = e.target.value; renderInventory(); };
 try { if (localStorage.getItem("cave.map") === "bues") S.mapMode = "bues"; } catch (e) {}
-try { const v = localStorage.getItem("cave.view"); if (["cave", "inventaire", "reglages"].includes(v)) S.view = v; } catch (e) {}
+try { const v = localStorage.getItem("cave.view"); if (["cave", "inventaire", "reglages", "bilan"].includes(v)) S.view = v; } catch (e) {}
 render();
 
 (async () => {
@@ -1401,6 +1633,8 @@ render();
   if (!db) { clearTimeout(timer); S.err = "Connectez-vous à claude.ai pour voir et enregistrer votre cave."; $("#sync").textContent = "non connecté"; render(); return; }
   S.db = db;
   try { S.assets = await window.claude.use("assets"); } catch (e) { S.assets = null; }
+  try { S.sample = await window.claude.use("sample"); S.sampleImg = S.sample ? !!(await S.sample.limits().catch(() => ({}))).images : false; } catch (e) { S.sample = null; }
+  wirePairing();
   let got = { racks: false, wines: false, cellars: false };
   const done = k => { got[k] = true; if (got.racks && got.wines && got.cellars) { clearTimeout(timer); S.ready = true; S.err = ""; $("#sync").textContent = "à jour"; } render(); };
   const fail = e => { clearTimeout(timer); S.err = "Lecture impossible : " + (e && e.message || "erreur inconnue"); $("#sync").textContent = "erreur"; render(); };
@@ -1408,6 +1642,6 @@ render();
   db.doc("settings/display").onSnapshot(s => { const id = s.exists ? s.data()?.cellarId : null; if (id && id !== S.cellarId) { S.cellarId = id; S.highlight = null; S.move = null; render(); } }, () => {});
   db.collection("racks").onSnapshot(s => { S.racks = s.docs.map(d => ({ id: d.id, ...d.data() })); done("racks"); }, fail);
   db.collection("wines").onSnapshot(s => { S.wines = s.docs.map(d => ({ id: d.id, ...d.data() })); done("wines"); }, fail);
-  db.collection("drunk").orderBy("at", "desc").onSnapshot(s => { S.drunkAll = s.docs.map(d => ({ id: d.id, ...d.data() })); S.drunk = S.drunkAll.slice(0, 30); renderInventory(); }, () => {});
+  db.collection("drunk").orderBy("at", "desc").onSnapshot(s => { S.drunkAll = s.docs.map(d => ({ id: d.id, ...d.data() })); S.drunk = S.drunkAll.slice(0, 30); renderInventory(); if (S.view === "bilan") renderStats(); }, () => {});
 })();
 </script>
