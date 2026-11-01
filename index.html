@@ -1,0 +1,1413 @@
+<title>Ma Cave à Vin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,500&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout (Grand Cru): eyebrow header, big italic bottle count, floating bottom nav; "Cave" shows racks as grids of round bottle-ends; "Inventaire" lists wines; bottom sheet for actions */
+:root {
+  /* Grand Cru: a sommelier's cellar at night. Single dark look on purpose. */
+  --bg: #120c13; --bg-2: #2a1a2b; --surface: #1b121c; --surface-2: #261a28; --fg: #efe6dc; --muted: #9b8f83; --line: #3a2a38;
+  --gold: #c9a96e; --gold-soft: rgb(201 169 110 / .35); --gold-faint: rgb(201 169 110 / .14);
+  --accent: #c9a96e; --accent-fg: #160e10; --accent-soft: rgb(201 169 110 / .12);
+  --rack: #0b070c; --rack-cell: #160f17; --rack-label: #c9a96e;
+  --w-rouge: #9c2338; --w-blanc: #e3c766; --w-rose: #f0a3b0; --w-bulles: #efe2a8; --w-liquoreux: #d48b1f; --w-autre: #8a8f98;
+  --ok: #8fbf8a; --warn: #e0a55a; --danger: #e07a6e;
+  --f-display: "Bodoni Moda", "Didot", Georgia, serif;
+  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --radius: 4px; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 12px; }
+h1 { font-family: var(--f-display); font-weight: 400; font-size: 1.5rem; margin: 0; letter-spacing: .01em; }
+h1 small { font-family: var(--f-body); font-size: .8rem; color: var(--muted); margin-left: 8px; font-weight: 500; }
+nav.tabs { display: flex; gap: 4px; margin-left: auto; background: var(--surface-2); border-radius: 999px; padding: 4px; }
+nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 .9rem var(--f-body); padding: 7px 16px; border-radius: 999px; cursor: pointer; }
+nav.tabs button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+main { padding-block: 20px 80px; display: grid; gap: 20px; }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.25rem; margin: 0; text-wrap: balance; }
+.muted { color: var(--muted); }
+.label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+button, .btn { font: 600 .9rem var(--f-body); border-radius: 8px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+button.ghost { border-color: transparent; background: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: default; }
+
+/* Summary strip */
+.summary { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline; }
+.summary .big { font-family: var(--f-display); font-size: 2.2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+button.chip { font-weight: 500; }
+button.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; border: 1px solid rgb(0 0 0 / .15); }
+.c-rouge { background: var(--w-rouge); } .c-blanc { background: var(--w-blanc); } .c-rose { background: var(--w-rose); }
+.c-bulles { background: var(--w-bulles); } .c-liquoreux { background: var(--w-liquoreux); } .c-autre { background: var(--w-autre); }
+
+/* Racks */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar .grow { flex: 1; min-width: 0; }
+.banner { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--radius); padding: 10px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.banner p { margin: 0; flex: 1; min-width: 200px; }
+.rack { background: var(--rack); border-radius: 12px; padding: 14px; color: #f1ebef; min-width: 0; }
+.rack-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.rack-head h3 { font-family: var(--f-display); font-weight: 400; font-size: 1.15rem; margin: 0; color: #f6f0f3; }
+.rack-head .meta { font-size: .8rem; color: var(--rack-label); font-variant-numeric: tabular-nums; }
+.rack-head button { margin-left: auto; background: transparent; color: var(--rack-label); border-color: #5a4f57; padding: 5px 10px; font-size: .8rem; }
+.rack-scroll { overflow-x: auto; padding-bottom: 4px; }
+.grid { display: grid; gap: 6px; width: max-content; }
+.axis { font: 500 .7rem var(--f-mono); color: var(--rack-label); display: grid; place-items: center; }
+.cell { width: 40px; height: 40px; border-radius: 50%; border: 0; padding: 0; background: var(--rack-cell); box-shadow: inset 0 2px 5px rgb(0 0 0 / .55); cursor: pointer; position: relative; }
+.cell.full { box-shadow: inset 0 -3px 6px rgb(0 0 0 / .35), 0 0 0 2px rgb(0 0 0 / .25); }
+.cell.full::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; background: rgb(0 0 0 / .22); }
+.cell.hl { outline: 3px solid #fff; outline-offset: 2px; }
+.cell.dim { opacity: .25; }
+.cell.target { box-shadow: inset 0 0 0 2px #fff6; }
+/* Realistic cabinet: deliberately single-look wood, same in both themes */
+:root { --wood-hi: #c08a52; --wood: #9a6634; --wood-lo: #6e4421; --wood-dark: #3b2414; --wall: #1d130d; --lamp: #ffd9a0; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; font-size: .85rem; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.cab { display: grid; gap: 10px; min-width: 0; }
+.cab-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cab-head h3 { font-family: var(--f-display); font-weight: 400; font-size: 1.15rem; margin: 0; }
+.cab-head .meta { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cab-head button { margin-left: auto; padding: 5px 10px; font-size: .8rem; }
+.cab-body { display: flex; gap: 10px; align-items: stretch; min-width: 0; }
+#legend { flex: 1 1 100%; }
+.cab-frame { flex: 1; min-width: 0; max-width: calc(var(--cols) * 69px + 64px); border-radius: 6px 6px 3px 3px; padding: 16px 14px 18px;
+  background:
+    repeating-linear-gradient(90deg, rgb(0 0 0 / .07) 0 1px, transparent 1px 7px, rgb(255 255 255 / .04) 7px 8px, transparent 8px 13px),
+    linear-gradient(180deg, var(--wood-hi), var(--wood) 30%, var(--wood-lo));
+  box-shadow: inset 0 0 0 2px rgb(0 0 0 / .18), inset 0 10px 0 -4px rgb(255 255 255 / .12), 0 10px 24px -8px rgb(0 0 0 / .45); }
+.cab-view { position: relative; height: calc(var(--lh) * 3); overflow: hidden; border-radius: 3px; touch-action: pan-x;
+  background: radial-gradient(120% 70% at 50% 50%, #3a2617, var(--wall) 75%);
+  box-shadow: inset 0 0 0 3px var(--wood-dark), inset 0 0 30px 6px rgb(0 0 0 / .7); }
+.cab-view.all { height: auto; }
+.cab-view.all .cab-stack { position: static; transform: none; will-change: auto; }
+.cab-view.all .lvl { filter: none; }
+.lvl.stk { height: calc(var(--lh) + var(--b) * .82); }
+.shelves { display: grid; position: relative; z-index: 1; }
+.shelf.up { margin-bottom: calc(var(--b) * -.18); padding-bottom: 0; z-index: 0; }
+.shelf.up .cell::before { display: none; }
+.cab-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cab-stack { position: absolute; inset: 0 0 auto; will-change: transform; }
+.lvl { height: var(--lh); display: grid; grid-template-columns: 22px 1fr; align-items: end; padding: 0 10px 0 4px; position: relative; filter: brightness(.45) saturate(.7); transition: filter .5s; }
+.lvl.cur { filter: none; }
+.lvl::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 12px; z-index: 0;
+  background: repeating-linear-gradient(90deg, rgb(0 0 0 / .08) 0 2px, transparent 2px 11px), linear-gradient(180deg, var(--wood-hi), var(--wood) 45%, var(--wood-lo));
+  box-shadow: 0 4px 6px rgb(0 0 0 / .55), inset 0 1px 0 rgb(255 255 255 / .25); }
+.lvl-tag { font: 500 .72rem var(--f-mono); color: var(--lamp); opacity: .8; align-self: center; text-align: center; padding-bottom: 12px; }
+.shelf { display: grid; grid-template-columns: repeat(var(--cols), var(--b)); gap: var(--gap); justify-content: center; position: relative; z-index: 1; padding-bottom: 7px; }
+.cab .cell { width: var(--b); height: var(--b); border-radius: 50%; box-shadow: none; background: radial-gradient(circle, #050302 0 52%, #22160d 66%, transparent 70%); }
+.cab .cell::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: -7px; height: 9px; border-radius: 0 0 50% 50% / 0 0 100% 100%; background: var(--wood-lo); box-shadow: inset 0 2px 2px rgb(0 0 0 / .5); z-index: -1; }
+.cab .cell.full { background:
+    radial-gradient(circle at 50% 50%, rgb(0 0 0 / .55) 0 15%, transparent 22%),
+    radial-gradient(circle at 34% 28%, rgb(255 255 255 / .55) 0 5%, transparent 16%),
+    radial-gradient(circle, var(--wc) 0 30%, color-mix(in srgb, var(--wc) 55%, #000) 58%, #000 72%, color-mix(in srgb, var(--wc) 40%, #000) 84%, rgb(0 0 0 / .9) 100%);
+  box-shadow: 0 3px 5px rgb(0 0 0 / .6); }
+.cab .cell.full::after { display: none; }
+.cab .cell.full.neck { background:
+    radial-gradient(circle at 42% 38%, rgb(255 255 255 / .45) 0 4%, transparent 9%),
+    radial-gradient(circle, var(--wc) 0 30%, color-mix(in srgb, var(--wc) 45%, #000) 36%, #1b2a1d 40%, #0e160f 62%, rgb(0 0 0 / .85) 72%, transparent 74%); }
+.cab .shelf.q { gap: calc(var(--gap) - 2px); }
+.cab .cell.hl { outline: 3px solid var(--lamp); outline-offset: 2px; }
+.cab .cell.dim { opacity: .3; }
+.cab .cell.target { box-shadow: inset 0 0 0 2px rgb(255 217 160 / .55); }
+.lamp { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 34% at 50% 48%, rgb(255 217 160 / .16), transparent 70%); }
+.ladder { display: flex; flex-direction: column; gap: 4px; align-items: stretch; width: 56px; flex: none; }
+.ladder button { padding: 6px 0; font-size: .8rem; }
+.ladder .rungs { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; max-height: calc(var(--lh) * 3 - 70px); }
+.ladder .rung { border: 0; border-radius: 6px; background: transparent; padding: 3px 4px; font: 500 .72rem var(--f-mono); color: var(--muted); display: flex; justify-content: space-between; gap: 4px; }
+.ladder .rung b { font-weight: 500; color: var(--fg); }
+.ladder .rung[aria-current="true"] { background: var(--accent); color: var(--accent-fg); }
+.ladder .rung[aria-current="true"] b { color: var(--accent-fg); }
+.ladder .rung.has-hl { box-shadow: inset 0 0 0 2px var(--accent); }
+.cab-foot { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .cab-stack { transition: transform .6s cubic-bezier(.22, .9, .25, 1); } }
+/* 3D view */
+.w3 { position: relative; height: min(68vh, 620px); min-height: 380px; border-radius: 12px; overflow: hidden; background: var(--wall); touch-action: none; }
+.w3 canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.w3 canvas:active { cursor: grabbing; }
+.w3-top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; pointer-events: none; }
+.w3-top > * { pointer-events: auto; }
+.w3-top .chip { background: rgb(20 12 8 / .7); color: #f3e6d6; border-color: rgb(255 217 160 / .25); backdrop-filter: blur(4px); }
+.w3-top .chip[aria-pressed="true"] { background: var(--lamp); color: #2a180c; border-color: var(--lamp); }
+.w3-nav { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.w3-nav button { background: rgb(20 12 8 / .75); color: #f3e6d6; border-color: rgb(255 217 160 / .3); min-width: 52px; }
+.w3-nav .lv { text-align: center; font: 500 .8rem var(--f-mono); color: var(--lamp); background: rgb(20 12 8 / .75); border-radius: 8px; padding: 6px 4px; }
+.w3-hint { position: absolute; left: 10px; bottom: 10px; right: 80px; font-size: .78rem; color: #d8c6b2; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.w3-tip { position: absolute; pointer-events: none; background: rgb(20 12 8 / .9); color: #fff; font-size: .8rem; padding: 5px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -130%); }
+.w3-msg { position: absolute; inset: 0; display: grid; place-items: center; color: #e8d8c6; text-align: center; padding: 20px; }
+.cell { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.cell.lifting { opacity: .25; }
+.cell.drop { outline: 3px dashed var(--accent); outline-offset: 2px; }
+.cab .cell.drop { outline-color: var(--lamp); }
+.cell.ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -50%) scale(1.3); box-shadow: 0 12px 24px rgb(0 0 0 / .55); opacity: .95; transition: none; }
+body.dragging, body.dragging * { cursor: grabbing !important; }
+.stkset { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0; }
+.stkset legend { font-size: .82rem; font-weight: 600; color: var(--muted); padding: 0 4px; }
+.stkbox { display: flex; flex-wrap: wrap; gap: 6px; }
+.stkopt { display: inline-flex !important; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; font: 500 .85rem var(--f-mono) !important; color: var(--fg) !important; cursor: pointer; }
+.stkopt input { width: auto; margin: 0; }
+.racklist { flex-basis: 100%; display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.racklist .rk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.racklist .rk span { flex: 1 1 180px; min-width: 0; font-size: .9rem; }
+.racklist .rk small { color: var(--muted); font-variant-numeric: tabular-nums; }
+.racklist button { padding: 6px 10px; font-size: .82rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+
+/* Inventory */
+input, select, textarea { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; }
+.list { display: grid; gap: 10px; }
+.wine { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: start; cursor: pointer; text-align: left; width: 100%; font-weight: 400; }
+.wine:hover { border-color: var(--accent); }
+.wine .dot { width: 14px; height: 14px; margin-top: 5px; }
+.wine .name { font-weight: 700; font-size: 1rem; }
+.wine .sub { color: var(--muted); font-size: .88rem; }
+.wine .count { font-family: var(--f-display); font-size: 1.5rem; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.wine .count small { display: block; font-family: var(--f-body); font-size: .7rem; color: var(--muted); }
+.wine .locs { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; }
+.loc { font: 500 .72rem var(--f-mono); background: var(--surface-2); border-radius: 4px; padding: 2px 6px; }
+.pill { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.pill.now { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.late { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.pill.wait { background: var(--surface-2); color: var(--muted); }
+.empty { text-align: center; padding: 36px 16px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+.hist { display: grid; gap: 6px; font-size: .88rem; }
+.hist div { display: flex; gap: 10px; align-items: center; }
+.cellar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.cellar.on { border-color: var(--accent); background: var(--accent-soft); }
+.cellar .pick-c { display: flex; gap: 12px; align-items: center; flex: 1 1 220px; min-width: 0; cursor: pointer; border: 0; background: transparent; padding: 0; text-align: left; font-weight: 400; }
+.radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); flex: none; display: grid; place-items: center; }
+.cellar.on .radio { border-color: var(--accent); }
+.cellar.on .radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.cellar .cname { font-weight: 700; font-size: 1rem; }
+.cellar .cmeta { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.cellar .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.cellar .actions button { padding: 6px 10px; font-size: .82rem; }
+.hist time { font: 500 .75rem var(--f-mono); color: var(--muted); min-width: 84px; }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; background: rgb(10 5 12 / .5); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 620px; max-height: 90%; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 20px max(18px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; }
+@media (min-width: 700px) { .scrim { align-items: center; } .sheet { border-radius: 16px; } }
+.sheet header { display: flex; gap: 12px; align-items: flex-start; }
+.sheet header > div { flex: 1; min-width: 0; }
+.sheet .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form .full { grid-column: 1 / -1; }
+.form label { display: grid; gap: 4px; font-size: .82rem; font-weight: 600; color: var(--muted); }
+@media (max-width: 520px) { .form { grid-template-columns: 1fr; } }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .9rem; margin: 0; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.pick { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+.pick button { display: flex; gap: 10px; align-items: center; text-align: left; font-weight: 500; }
+.pick button span.grow { flex: 1; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 30; font-weight: 600; font-size: .9rem; }
+@media (prefers-reduced-motion: no-preference) { .cell { transition: transform .12s; } .cell:hover { transform: scale(1.08); } }
+
+/* map */
+.mapsec { display: grid; gap: 8px; }
+#map svg { width: 100%; max-width: 520px; height: auto; display: block; margin: 0 auto; }
+#map .fr { fill: #1c141d; stroke: var(--gold-soft); stroke-width: 1.2; }
+#map .towns circle { fill: var(--gold); fill-opacity: .9; stroke: var(--bg); stroke-width: 2.5; cursor: pointer; transition: r .2s; }
+#map .towns.bues circle { fill: #e8dcc8; }
+#map .town:hover circle, #map .town:focus-visible circle { stroke: var(--fg); outline: none; }
+#map .town.on circle { fill: var(--fg); stroke: var(--gold); stroke-width: 4; }
+#map .town { outline: none; }
+.mapseg { justify-content: center; display: flex; margin-bottom: 4px; }
+.map-drunk { max-height: 280px; overflow-y: auto; }
+.townfld { position: relative; }
+.sugg { position: absolute; z-index: 30; left: 0; right: 0; top: 100%; margin-top: 4px; background: var(--surface); border: 1px solid var(--gold-soft); border-radius: var(--radius); box-shadow: 0 12px 30px -8px rgb(0 0 0 / .8); display: grid; max-height: 260px; overflow-y: auto; }
+.sugg button { border: 0; border-radius: 0; text-align: left; font-weight: 400; padding: 10px 12px; }
+.sugg button:hover, .sugg button.act { background: var(--gold-faint); }
+#map .bz { fill: var(--surface-2); stroke: var(--gold-soft); stroke-width: 1.5; cursor: pointer; transition: fill .2s; }
+#map .bz.has { fill: rgb(201 169 110 / var(--o)); stroke: var(--gold); }
+#map .bz:hover, #map .bz:focus-visible { fill: rgb(201 169 110 / .55); outline: none; }
+#map .bz.on { fill: var(--gold); stroke: var(--fg); stroke-width: 3; }
+#map .bl { pointer-events: none; }
+#map .bl circle { fill: var(--bg); stroke: var(--gold); stroke-width: 2; }
+#map .bl .c { fill: var(--fg); font: italic 34px var(--f-display); text-anchor: middle; }
+#map .bl .t { fill: var(--fg); font: 700 28px var(--f-body); letter-spacing: .08em; text-anchor: middle; text-transform: uppercase; paint-order: stroke; stroke: var(--bg); stroke-width: 6px; }
+.map-note { margin: 0; font-size: .85rem; text-align: center; }
+.linkbtn { border: 0; padding: 0; background: none; color: var(--gold); text-decoration: underline; font: inherit; cursor: pointer; }
+/* ===================== Grand Cru ===================== */
+body { background: radial-gradient(120% 50% at 50% 0%, var(--bg-2), var(--bg) 62%) fixed, var(--bg); font-size: 15px; }
+body::before { background: var(--bg); }
+header.top { position: static; background: transparent; border: 0; }
+header.top .wrap { padding-block: 22px 0; }
+h1 { font-family: var(--f-body); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+h1 .eyebrow { color: var(--muted); }
+h1 small { font-size: .62rem; letter-spacing: .14em; color: var(--muted); }
+main { padding-block: 10px 120px; gap: 24px; }
+h2 { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 1.45rem; color: var(--fg); }
+.label { color: var(--gold); letter-spacing: .2em; font-size: .64rem; }
+.muted { color: var(--muted); }
+/* summary */
+.summary { display: grid; gap: 12px; }
+.hero { display: flex; align-items: baseline; gap: 10px; }
+.hero .n { font-family: var(--f-display); font-style: italic; font-size: clamp(3.4rem, 12vw, 5rem); line-height: .9; font-variant-numeric: lining-nums; }
+.hero .u { color: var(--muted); font-size: 1rem; }
+.rule { height: 1px; background: linear-gradient(90deg, var(--gold), transparent 85%); }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stats b { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 1.25rem; letter-spacing: 0; color: var(--fg); margin-right: 4px; text-transform: none; }
+.stats .warn b { color: var(--warn); }
+.chip { background: transparent; border-color: var(--gold-soft); color: var(--fg); border-radius: 999px; }
+button.chip[aria-pressed="true"] { border-color: var(--gold); background: var(--gold-faint); color: var(--gold); }
+.dot { border-color: rgb(0 0 0 / .4); }
+/* buttons & inputs */
+button, .btn { background: transparent; color: var(--fg); border: 1px solid var(--gold-soft); border-radius: var(--radius); font-family: var(--f-body); letter-spacing: .02em; }
+button:hover:not(:disabled) { border-color: var(--gold); }
+button.primary { background: var(--gold); border-color: var(--gold); color: var(--accent-fg); }
+button.danger { color: var(--danger); border-color: rgb(224 122 110 / .45); }
+button.ghost { border-color: transparent; color: var(--muted); }
+input, select, textarea { background: var(--rack); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+input::placeholder, textarea::placeholder { color: #6f6459; font-style: italic; }
+input:focus, select:focus, textarea:focus { border-color: var(--gold); outline: none; }
+#q { border: 0; border-bottom: 1px solid var(--gold-soft); border-radius: 0; background: transparent; font-family: var(--f-display); font-style: italic; font-size: 1rem; padding-inline: 0; }
+/* bottom floating nav */
+nav.tabs { position: fixed; z-index: 15; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); margin: 0; display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: rgb(18 12 19 / .9); border: 1px solid var(--gold-soft); border-radius: 999px; backdrop-filter: blur(10px); box-shadow: 0 12px 30px -10px rgb(0 0 0 / .8); }
+nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 .66rem var(--f-body); letter-spacing: .16em; text-transform: uppercase; padding: 9px 12px; border-radius: 999px; box-shadow: none; }
+nav.tabs button[aria-selected="true"] { color: var(--fg); background: transparent; box-shadow: none; }
+nav.tabs button[aria-selected="true"]::after { content: ""; display: block; height: 1px; background: var(--gold); margin-top: 3px; }
+nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; background: var(--gold); color: var(--accent-fg); font: 400 1.5rem/1 var(--f-body); letter-spacing: 0; display: grid; place-items: center; margin-inline: 4px; }
+/* view switch as text links */
+.seg { background: transparent; padding: 0; gap: 16px; }
+.seg button { padding: 4px 0; border-radius: 0; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); border: 0; }
+.seg button[aria-pressed="true"] { background: transparent; box-shadow: none; color: var(--fg); border-bottom: 1px solid var(--gold); }
+.legend { color: var(--muted); }
+.banner { background: var(--gold-faint); border-color: var(--gold-soft); border-radius: var(--radius); }
+/* plan view */
+.rack { background: var(--rack); border: 1px solid var(--gold-soft); border-radius: var(--radius); }
+.rack-head h3, .cab-head h3 { font-family: var(--f-display); font-style: italic; font-size: 1.25rem; color: var(--fg); }
+.axis { color: var(--gold); font-family: var(--f-display); font-style: italic; font-size: .8rem; }
+.cell { background: transparent; box-shadow: none; border: 1px solid var(--gold-faint); }
+.cell.full { border-color: var(--gold); box-shadow: inset 0 0 0 3px var(--rack); }
+.cell.full::after { display: none; }
+.cell.hl { outline-color: var(--fg); }
+/* Étagères view: black panel, gold hairlines */
+.cab-frame { background: var(--rack); border: 1px solid var(--gold-soft); border-radius: var(--radius); box-shadow: 0 20px 40px -20px rgb(0 0 0 / .9); padding: 12px 10px 10px; }
+.cab-view { background: transparent; box-shadow: none; }
+.lvl::after { height: 1px; background: linear-gradient(90deg, transparent, var(--gold-soft) 12%, var(--gold-soft) 88%, transparent); box-shadow: none; }
+.lvl-tag { color: var(--gold); font: italic .85rem var(--f-display); opacity: 1; padding-bottom: 6px; }
+.shelf { padding-bottom: 8px; }
+.cab .cell { background: transparent; border: 1px solid var(--gold-faint); box-shadow: none; }
+.cab .cell::before { display: none; }
+.cab .cell.full { border: 1px solid var(--gold); box-shadow: inset 0 0 0 3px var(--rack), 0 4px 10px rgb(0 0 0 / .5);
+  background: radial-gradient(circle at 50% 50%, rgb(0 0 0 / .45) 0 13%, transparent 18%), radial-gradient(circle at 35% 30%, rgb(255 255 255 / .35) 0 5%, transparent 15%), radial-gradient(circle, var(--wc) 0 45%, color-mix(in srgb, var(--wc) 55%, #000) 75%); }
+.cab .cell.full.neck { background: radial-gradient(circle at 42% 38%, rgb(255 255 255 / .4) 0 4%, transparent 9%), radial-gradient(circle, var(--wc) 0 30%, color-mix(in srgb, var(--wc) 45%, #000) 36%, #1b2a1d 40%, #0e160f 68%); }
+.cab .cell.hl { outline-color: var(--fg); }
+.cab .cell.target { box-shadow: inset 0 0 0 2px var(--gold-soft); }
+.cell.drop, .cab .cell.drop { outline: 2px dashed var(--gold); }
+.cab-head .meta, .rack-head .meta { color: var(--muted); }
+/* À ouvrir bientôt */
+#soon { display: grid; gap: 12px; }
+.soon { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+.label-card { flex: none; width: 150px; scroll-snap-align: start; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 16px 12px; background: var(--surface); border: 1px solid var(--gold-soft); border-radius: 3px; position: relative; }
+.label-card::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--gold-faint); pointer-events: none; }
+.label-card .v { font: italic 2rem/1 var(--f-display); color: var(--gold); }
+.label-card .n { font-size: .82rem; font-weight: 600; line-height: 1.25; }
+.label-card .r { font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.label-card .late { font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--warn); }
+/* Inventory: vintage-led list */
+.list { gap: 0; }
+.wine { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 14px 4px; grid-template-columns: 76px 1fr auto; gap: 4px 14px; align-items: center; }
+.wine:hover { border-color: var(--line); background: var(--gold-faint); }
+.wine .yr { font: italic 1.7rem/1 var(--f-display); color: var(--gold); font-variant-numeric: lining-nums; }
+.wine .mid { display: grid; gap: 3px; min-width: 0; }
+.wine .name { font-weight: 600; font-size: .98rem; display: flex; gap: 8px; align-items: center; }
+.wine .name .dot { width: 8px; height: 8px; margin: 0; }
+.wine .sub { font-size: .64rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.wine .count { font: 400 1.5rem/1 var(--f-display); }
+.wine .locs { grid-column: 1 / -1; padding-left: 90px; }
+@media (max-width: 480px) { .wine .locs { padding-left: 0; } }
+.legend > span:not(.muted) { display: none; }
+.loc { background: transparent; border: 1px solid var(--gold-faint); color: var(--muted); border-radius: 2px; }
+.pill { justify-self: start; letter-spacing: .1em; text-transform: uppercase; font-size: .58rem; }
+.pill.now { background: rgb(143 191 138 / .12); color: var(--ok); }
+.pill.late { background: rgb(224 165 90 / .14); color: var(--warn); }
+.pill.wait { background: var(--gold-faint); color: var(--muted); }
+.hist time { color: var(--gold); }
+.empty { border-color: var(--gold-soft); border-radius: var(--radius); }
+/* settings */
+.cellar { background: var(--surface); border-color: var(--line); border-radius: var(--radius); }
+.cellar.on { border-color: var(--gold); background: linear-gradient(180deg, var(--gold-faint), transparent); }
+.cellar .cname { font: italic 1.25rem var(--f-display); font-weight: 400; }
+.radio { border-color: var(--muted); } .cellar.on .radio { border-color: var(--gold); } .cellar.on .radio::after { background: var(--gold); }
+.racklist { border-top-color: var(--line); }
+.stkopt { border-color: var(--gold-soft) !important; }
+.stkset { border-color: var(--line); }
+/* sheets */
+.scrim { background: rgb(6 3 7 / .7); }
+.sheet { background: var(--surface); border-top: 1px solid var(--gold-soft); box-shadow: 0 -20px 40px rgb(0 0 0 / .6); }
+@media (min-width: 700px) { .sheet { border: 1px solid var(--gold-soft); border-radius: 6px; } }
+.sheet h2 { font-size: 1.6rem; }
+.facts dt { color: var(--gold); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; padding-top: 3px; }
+.pick button { border-color: var(--line); }
+.toast { background: var(--gold); color: var(--accent-fg); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); border-radius: 999px; }
+.w3 { border: 1px solid var(--gold-soft); border-radius: var(--radius); }
+.w3-top .chip[aria-pressed="true"] { background: var(--gold); color: var(--accent-fg); border-color: var(--gold); }
+.w3-nav { bottom: 10px; }
+/* Label photos */
+.wine .yr .thumb { display: block; width: 46px; height: 60px; object-fit: cover; margin-top: 8px; border: 1px solid var(--gold); padding: 2px; background: #000; }
+.labelpics { display: grid; gap: 8px; margin: 4px 0 2px; } .labelpics.n2 { grid-template-columns: 1fr 1fr; } .labelpics.zoom { grid-template-columns: 1fr; } .labelpics.zoom .labelpic:not(.big) { display: none; }
+.labelpic { display: block; width: 100%; max-height: 46vh; object-fit: contain; background: #0a070b; border: 1px solid var(--gold); padding: 4px; cursor: zoom-in; }
+.labelpic.big { max-height: 85vh; cursor: zoom-out; }
+.photos { display: grid; gap: 12px; } @media (min-width: 560px) { .photos { grid-template-columns: 1fr 1fr; } }
+.photo-field { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+.photo-field .prev { width: 84px; height: 110px; border: 1px dashed var(--gold); display: grid; place-items: center; color: var(--muted); font-size: .75rem; text-align: center; overflow: hidden; }
+.photo-field .prev img { width: 100%; height: 100%; object-fit: cover; }
+.photo-field .btns { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.photo-field .btn { color: var(--fg); display: inline-block; width: auto; }
+.photo-field input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+/* ---------- Desktop / large screens (William, 2026-11-01): same app, layout adapts ---------- */
+@media (min-width: 1000px) {
+  .wrap { max-width: 1280px; padding-left: 32px; padding-right: 32px; }
+  main { padding-block: 10px 60px; }
+  header.top .wrap { padding-block: 26px 0; padding-right: 420px; }
+  /* bottom pill becomes a top-right bar */
+  nav.tabs { top: 18px; bottom: auto; left: auto; right: max(32px, calc((100vw - 1280px) / 2 + 32px)); transform: none; padding: 6px 8px; }
+  nav.tabs button { font-size: .7rem; padding: 10px 16px; }
+  nav.tabs .plus { width: 38px; height: 38px; font-size: 1.35rem; }
+  /* Cave: cabinets side by side, "À ouvrir bientôt" as a side column */
+  #view-cave { grid-template-columns: minmax(0, 1fr) 260px; column-gap: 40px; align-items: start; }
+  #view-cave > .toolbar, #view-cave > #banner { grid-column: 1 / -1; }
+  #view-cave > #soon:empty { display: none; }
+  #view-cave:has(> #soon:empty) > #racks { grid-column: 1 / -1; }
+  #racks:has(> .cab), #racks:has(> .rack) { display: flex !important; flex-wrap: wrap; gap: 32px 40px !important; align-items: flex-start; }
+  #racks > .cab { flex: 0 1 calc(var(--cols) * 69px + 64px); min-width: 320px; max-width: 100%; }
+  #racks > .rack { flex: 0 1 auto; max-width: 100%; }
+  #racks > p { flex: 1 1 100%; }
+  #soon { position: sticky; top: 90px; }
+  #soon .soon { flex-direction: column; overflow: visible; }
+  #soon .label-card { width: 100%; }
+  /* Vins: map in a sticky left column, list on the right */
+  #view-inventaire { grid-template-columns: 360px minmax(0, 1fr); column-gap: 48px; align-items: start; }
+  #view-inventaire > .mapsec { grid-column: 1; grid-row: 1 / span 4; position: sticky; top: 90px; }
+  #view-inventaire > :not(.mapsec) { grid-column: 2; }
+  #map svg { max-width: 100%; }
+  /* Réglages: cellars on two columns when there are several */
+  #cellars { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 20px; align-items: start; }
+  .sheet { max-width: 720px; }
+  .labelpic { max-height: 52vh; }
+}
+@media (min-width: 1000px) and (hover: hover) { .wine { transition: background .15s; } }
+</style>
+
+<header class="top"><div class="wrap">
+  <h1><span class="eyebrow">Ma cave</span> · <span id="cellar-name">Ma Cave</span> <small id="sync">connexion…</small></h1>
+</div></header>
+<nav class="tabs" role="tablist" aria-label="Navigation">
+  <button id="tab-cave" role="tab" aria-selected="true" data-view="cave">Cave</button>
+  <button id="tab-inv" role="tab" aria-selected="false" data-view="inventaire">Vins</button>
+  <button id="nav-add" class="plus" aria-label="Ajouter un vin">+</button>
+  <button id="tab-set" role="tab" aria-selected="false" data-view="reglages">Réglages</button>
+</nav>
+
+<main class="wrap">
+  <section class="summary" id="summary"></section>
+
+  <section id="view-cave" style="display:grid;gap:16px">
+    <div class="toolbar">
+      <div class="legend grow" id="legend"></div>
+      <div class="seg" role="group" aria-label="Affichage">
+        <button id="mode-shelf" data-mode="etageres" aria-pressed="true">Étagères</button>
+        <button id="mode-plan" data-mode="plan" aria-pressed="false">Plan</button>
+        <button id="mode-3d" data-mode="3d" aria-pressed="false">3D</button>
+      </div>
+      <button id="btn-add-rack">Régler les casiers</button>
+    </div>
+    <div id="banner"></div>
+    <div id="racks" style="display:grid;gap:16px"></div>
+    <div id="soon"></div>
+  </section>
+
+  <section id="view-inventaire" hidden style="display:grid;gap:16px">
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Chercher un vin, domaine, appellation, millésime…" class="grow" style="flex:1 1 240px">
+      <select id="sort" style="width:auto">
+        <option value="name">Trier par nom</option>
+        <option value="vintage">Par millésime</option>
+        <option value="drink">Par date de garde</option>
+        <option value="count">Par quantité</option>
+      </select>
+      <button class="primary" id="btn-add-wine">+ Ajouter un vin</button>
+    </div>
+    <section class="mapsec"><h2>Carte de France</h2><div id="map"></div></section>
+    <div class="chips" id="filters"></div>
+    <div class="list" id="list"></div>
+    <div style="display:grid;gap:8px">
+      <div class="toolbar"><h2 class="grow">Dernières bouteilles bues</h2><button id="hist-clear" class="danger" hidden>Effacer l'historique</button></div>
+      <div id="hist-confirm"></div>
+      <div class="hist" id="hist"></div>
+    </div>
+  </section>
+
+  <section id="view-reglages" hidden style="display:grid;gap:16px">
+    <div class="toolbar">
+      <div class="grow"><h2>Mes caves</h2><div class="muted">Choisissez la cave à afficher dans les onglets Cave et Inventaire.</div></div>
+      <button class="primary" id="btn-add-cellar">+ Nouvelle cave</button>
+    </div>
+    <div class="list" id="cellars" role="radiogroup" aria-label="Cave affichée"></div>
+  </section>
+</main>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+
+<script>
+/* ---------- Bassins viticoles (contours simplifiés depuis le fichier GeoJSON de William) ---------- */
+const GEO = {"w":1000,"h":958,"p":[-5.1036,51.0884,68.19737,98.58049],"fr":"M834,353L824,355L825,358L821,360L821,363L820,363L817,368L826,366L830,369L829,371L822,375L822,379L817,383L816,387L808,392L808,394L804,396L806,398L805,399L800,403L791,406L787,410L789,414L787,423L789,424L786,427L777,433L765,445L768,448L762,456L763,458L762,461L769,465L764,474L766,477L756,480L755,482L757,483L754,489L761,487L766,488L776,480L778,476L775,477L773,474L778,466L781,465L784,468L792,462L794,463L807,461L812,464L810,467L816,474L812,481L812,488L819,490L817,496L818,497L820,495L822,497L827,504L828,509L825,515L821,517L813,518L812,529L821,536L823,536L825,537L824,542L825,550L832,554L833,557L838,560L835,568L833,568L835,575L830,579L829,578L823,580L822,582L818,584L818,587L815,588L810,584L808,587L804,586L800,590L802,593L803,598L808,599L808,601L809,603L808,609L816,615L820,615L821,614L826,616L827,619L825,621L828,628L830,628L831,632L824,631L823,633L823,637L821,642L815,647L817,652L821,656L818,657L818,663L820,664L822,669L825,671L826,675L836,678L845,685L849,684L850,687L867,684L869,681L872,682L871,686L874,692L873,695L871,696L870,701L866,703L864,709L859,712L862,720L854,726L850,726L846,730L842,729L840,734L836,733L834,742L832,741L829,743L822,745L822,750L818,755L811,757L809,756L807,757L806,763L797,770L797,771L802,771L803,770L805,771L802,774L803,777L800,782L798,779L795,779L791,782L785,783L782,784L782,789L776,785L771,786L768,789L768,795L765,793L766,790L759,790L758,787L753,787L752,785L750,786L752,789L748,793L746,792L744,790L745,787L742,786L742,784L736,783L734,779L732,779L730,781L725,776L724,778L712,776L714,773L713,770L714,767L711,762L704,765L692,765L687,755L684,755L680,757L679,760L681,762L679,765L666,763L659,761L659,759L661,758L659,754L632,751L630,749L629,747L630,745L628,743L622,743L615,746L607,754L602,756L602,758L598,759L587,771L582,769L579,769L571,775L565,781L559,791L556,801L557,806L555,834L557,843L562,845L562,848L565,853L558,854L555,849L551,850L549,848L547,851L542,851L539,855L536,854L530,856L529,858L530,862L524,861L521,863L517,862L514,858L502,853L498,855L493,855L490,860L483,860L480,851L477,852L471,848L466,847L466,842L470,839L466,838L467,836L458,834L454,831L449,832L449,835L446,836L441,825L432,824L427,826L424,820L415,818L414,817L411,818L407,815L396,811L393,813L394,817L392,819L395,826L394,828L384,827L378,828L373,825L368,829L366,825L360,823L347,828L341,825L337,817L336,819L327,812L321,817L318,817L313,815L310,819L302,809L299,808L297,801L293,802L284,802L272,795L271,796L264,792L262,793L259,791L261,786L256,788L256,795L250,793L248,788L252,785L254,772L245,768L241,769L240,773L238,773L237,768L234,766L230,768L228,763L226,763L226,760L236,757L239,755L248,736L258,686L263,653L262,645L266,636L267,634L269,633L274,636L279,635L276,629L269,622L262,636L269,571L269,554L271,550L274,545L276,545L277,550L291,563L296,572L301,592L307,599L308,596L303,588L298,564L293,555L280,543L279,540L264,531L263,523L271,521L269,515L273,514L275,507L273,503L276,502L276,501L271,489L268,487L266,487L265,485L266,481L272,476L271,471L266,470L266,475L256,468L248,468L246,462L238,461L227,453L224,453L221,442L216,433L214,433L213,431L202,421L201,414L203,414L208,408L210,402L213,400L208,394L196,390L196,388L200,387L200,377L199,375L191,380L186,376L182,377L177,375L177,371L174,366L181,361L180,359L178,358L177,355L182,354L180,353L176,351L170,352L170,351L167,350L165,354L163,353L157,355L154,354L152,350L149,350L150,348L151,348L153,350L157,348L160,350L163,346L163,345L160,343L160,340L154,342L151,344L151,346L148,344L143,347L142,345L135,347L134,351L137,355L135,356L133,353L134,346L129,340L130,336L132,336L135,332L131,331L132,334L129,337L129,339L124,334L120,333L120,331L117,334L113,334L108,328L107,321L108,319L107,328L97,326L93,324L91,325L85,325L77,314L77,319L72,320L70,318L67,318L64,319L63,317L62,318L64,321L63,324L51,325L49,322L51,321L51,319L46,308L38,303L37,304L32,302L28,302L26,298L50,294L54,296L56,294L57,289L55,289L55,285L44,281L41,282L37,288L37,282L38,281L37,279L34,279L37,276L36,273L38,271L39,276L46,276L49,277L54,275L57,275L57,277L60,275L53,273L54,271L50,271L50,272L45,272L48,266L46,265L34,271L29,269L27,272L23,272L23,268L21,264L23,258L22,255L25,250L34,248L37,245L37,243L46,242L51,238L60,241L63,237L71,237L76,233L79,240L82,239L86,243L85,237L87,235L99,236L100,238L99,239L104,238L104,234L106,231L104,228L107,225L107,223L112,223L114,226L116,226L121,222L126,222L128,219L130,222L137,219L138,223L143,223L143,226L140,227L143,229L148,230L147,233L155,240L156,246L163,250L164,255L166,254L165,252L169,253L173,247L178,244L180,240L184,241L190,238L192,239L189,243L190,244L194,241L198,247L200,248L200,245L203,245L202,242L204,241L210,243L214,252L215,251L210,240L216,236L222,236L223,237L220,241L222,244L227,245L243,242L245,244L250,243L253,240L245,236L244,232L242,232L241,223L239,222L243,213L238,198L240,183L237,185L231,174L225,169L222,156L220,155L219,153L222,150L222,145L221,142L215,139L216,134L220,136L223,136L224,138L231,139L234,141L237,141L237,142L244,141L247,140L248,137L251,137L262,137L264,146L263,145L260,148L259,153L268,166L268,169L272,171L275,168L284,167L292,171L320,173L333,178L348,174L357,166L371,162L356,160L353,156L361,136L370,133L387,122L402,120L414,115L418,116L430,110L447,96L449,90L454,86L457,89L463,89L461,86L459,86L457,82L454,82L453,79L454,73L460,73L454,68L456,54L458,55L456,51L454,38L457,32L456,21L460,21L469,13L497,7L498,5L508,3L511,4L522,0L524,8L528,14L525,17L528,27L533,27L540,37L542,36L546,39L547,38L548,34L554,31L559,31L560,29L563,30L567,37L570,38L569,42L572,55L578,59L585,55L588,56L586,58L594,58L598,63L598,71L601,77L604,73L611,73L615,75L623,72L629,78L629,80L635,80L636,82L632,87L629,94L634,94L636,99L630,105L632,108L630,109L634,110L634,112L642,110L651,113L656,113L660,109L667,108L669,102L667,101L673,94L677,91L681,92L682,94L680,95L680,98L679,97L678,104L675,110L681,116L679,121L680,123L679,128L689,127L690,129L695,130L700,138L707,137L712,141L710,145L712,144L718,147L721,157L727,154L731,154L734,151L737,153L742,150L746,152L746,155L748,157L755,157L756,161L766,159L768,156L775,156L782,161L786,159L789,160L795,165L794,166L797,168L796,172L801,177L805,185L806,184L807,186L806,187L808,190L814,191L816,188L814,185L821,184L823,186L828,187L829,195L832,192L836,194L842,193L845,194L850,192L850,189L856,188L856,189L859,189L862,196L866,198L869,201L875,202L880,199L885,203L889,200L900,207L909,208L910,209L907,210L903,216L900,225L892,230L891,233L883,241L880,247L880,253L878,256L876,265L876,271L873,274L871,282L865,293L864,301L868,307L863,316L862,325L863,330L860,334L861,338L866,344L865,346L860,349L861,352L859,356L855,354L854,355L856,356L851,360L848,360L842,361L841,360L837,359L838,355ZM690,743L689,751L693,752L694,758L698,758L702,754L704,753L704,750L703,749L699,752L696,746L692,746ZM198,408L196,406L194,407L191,404L193,400L197,402L196,405L202,410L200,412ZM130,367L133,367L134,371L139,372L137,375L132,373L128,374L126,372L126,366L128,366ZM247,481L251,479L251,481L255,481L260,483L261,487L256,486L248,482L244,482L242,478L246,477L247,479L245,480ZM263,517L262,514L253,506L252,497L254,498L259,502L263,503L264,509L267,513L267,518L264,521ZM989,910L989,926L987,928L988,929L987,932L981,934L982,937L984,935L987,936L981,943L981,947L977,951L977,953L979,954L977,958L974,958L973,957L968,955L968,951L961,947L954,945L947,936L948,932L953,931L956,927L946,924L946,921L943,923L940,921L943,918L942,916L946,915L947,907L948,907L947,903L935,906L934,901L936,899L939,898L938,895L944,892L942,886L938,884L933,881L932,873L941,870L941,869L936,865L936,861L932,863L931,862L933,858L935,858L935,855L938,855L939,845L942,844L943,841L945,840L947,841L949,837L953,835L954,834L963,833L966,830L968,825L970,824L977,823L982,829L985,823L985,817L983,814L984,807L986,803L985,798L990,797L993,799L993,801L995,818L992,830L998,840L1000,877L999,886L990,900Z","b":[{"id":"ARMAGNAC","d":"M382,749L382,747L378,745L378,742L374,741L373,742L373,745L367,741L367,744L365,745L362,743L361,747L357,748L356,746L352,746L349,744L347,738L343,738L341,740L337,740L336,739L332,740L331,737L329,736L329,734L326,732L326,729L329,725L325,723L326,720L321,719L327,713L324,706L328,701L328,696L335,696L346,699L348,698L348,695L353,696L356,689L357,687L360,687L361,685L368,686L368,682L366,680L366,679L371,679L372,682L375,684L377,682L378,684L379,693L385,694L389,691L391,694L389,697L395,700L396,700L395,701L397,702L396,706L398,708L396,709L399,711L399,718L397,720L399,723L402,725L401,728L399,728L401,731L397,730L395,733L397,737L394,736L396,737L394,741L395,744L391,743L390,748L387,748L386,746L385,746L384,749Z","cx":366,"cy":719},{"id":"COGNAC","d":"M340,589L338,591L331,590L329,586L327,585L327,587L324,583L322,586L319,580L320,577L319,573L309,571L308,566L308,569L304,569L299,568L293,555L282,545L278,539L272,536L266,532L264,532L266,534L264,533L263,523L271,521L268,516L272,516L275,511L275,508L273,507L275,507L272,501L274,502L276,501L273,492L270,491L271,489L268,488L269,486L266,487L263,486L270,477L277,476L276,477L280,479L282,475L286,476L286,471L289,469L290,473L297,474L297,477L300,479L306,477L307,481L312,482L312,479L317,477L318,480L316,481L319,484L317,484L319,486L318,489L322,490L323,494L328,493L329,496L335,496L335,499L337,498L336,499L339,504L344,504L345,502L344,502L345,500L349,501L356,497L357,498L357,501L362,501L362,502L365,502L366,505L368,504L366,507L372,513L369,517L372,518L370,521L374,523L375,525L374,527L369,527L369,529L373,530L375,534L383,541L382,546L380,547L377,552L374,552L371,556L369,555L370,557L367,559L365,564L366,571L360,574L358,579L360,580L360,584L358,586L356,591L353,593L351,589L348,588L345,591L342,588ZM266,516L267,518L264,521L262,513L254,506L252,497L253,497L259,502L264,503L264,509L267,513ZM260,487L256,487L248,482L243,482L241,478L246,476L247,479L245,479L246,481L249,479L252,479L250,480L251,481L260,483L262,486Z","cx":322,"cy":524},{"id":"VIN DOUX NATURELS","d":"M563,851L564,853L558,854L555,849L550,850L544,847L541,853L537,855L534,854L530,851L532,848L530,846L533,846L535,844L532,839L530,840L529,837L526,837L528,836L527,834L529,833L528,831L523,831L523,829L525,826L524,825L525,823L524,819L514,818L514,816L516,816L516,813L519,812L528,814L532,811L530,808L531,806L530,804L533,804L533,799L536,797L538,797L539,799L539,802L536,804L540,807L543,805L546,808L552,798L556,799L556,813L554,812L551,823L547,824L548,826L549,825L555,826L555,825L555,833L552,832L548,832L549,834L552,833L552,836L556,837L556,843L562,845L562,848ZM543,761L537,757L538,754L540,757L544,757L544,759ZM602,751L607,745L611,749L610,750L607,754L602,756L599,755L601,754ZM694,688L691,691L689,690L688,686L692,685L694,686ZM630,727L632,728L632,732L630,734L628,731L627,733L625,729L628,728L628,725ZM691,680L690,681L683,678L682,675L684,674L688,673L690,675L688,678L691,679Z","cx":552,"cy":817},{"id":"ALSACE ET EST","d":"M840,312L842,312L839,311L836,307L839,302L842,302L841,299L842,297L839,296L840,294L839,292L844,291L848,293L847,298L850,299L849,302L844,302L849,304L849,310L845,310L841,315L838,313ZM850,290L851,292L849,292L842,286L840,287L840,283L843,281L844,279L847,278L847,280L855,283L855,285L852,284L851,286ZM848,278L851,277L854,280L853,281L848,280ZM858,275L850,274L852,270L854,268L855,271L858,272ZM856,268L849,268L849,263L847,262L849,262L854,262L854,263L858,265ZM861,252L858,252L857,250L860,249L858,247L855,249L856,247L861,246L860,245L857,242L858,241L863,243L863,247L860,247L862,251ZM748,246L748,249L745,249L743,245L744,243L741,243L743,242L748,239L748,244L749,245ZM749,234L747,237L743,233L748,232ZM794,230L792,231L791,229L793,226L796,227ZM762,208L763,202L765,202L765,205L766,204L767,205L765,206L766,208L763,210ZM758,202L759,201L758,196L761,195L759,192L764,195L765,197L761,203L762,205L758,206Z","cx":824,"cy":269},{"id":"BOURGOGNE BEAUJOLAIS SAVOIE JURA","d":"M667,533L665,535L662,534L660,531L665,531L662,528L657,529L657,527L658,526L654,524L655,521L649,515L653,513L655,515L658,514L656,511L652,511L650,509L654,508L654,505L649,503L650,500L653,500L657,497L658,493L654,482L659,481L661,484L663,484L663,477L669,475L668,472L666,473L664,471L666,467L665,462L668,462L671,457L663,458L666,461L664,463L659,461L658,457L660,456L661,448L658,447L662,443L659,441L660,439L657,436L663,434L663,431L666,426L664,425L666,423L663,419L661,420L658,419L654,421L655,420L653,419L653,416L657,415L657,412L661,413L662,410L660,406L663,405L666,403L667,399L668,398L670,398L669,395L672,396L673,392L675,391L676,384L680,385L682,383L684,384L684,382L682,377L685,376L683,374L685,371L684,369L682,370L683,368L684,368L685,365L690,367L691,370L693,366L695,368L694,371L696,373L695,375L691,374L691,377L689,377L692,382L691,383L690,382L689,383L691,384L690,388L691,391L688,390L686,392L687,396L686,398L681,399L679,401L682,403L679,403L680,406L676,405L677,408L674,408L674,412L676,412L677,415L677,417L675,418L676,421L674,426L676,427L674,428L671,427L670,428L673,431L671,433L674,435L671,436L671,440L669,442L673,443L678,435L680,437L684,436L684,440L685,440L684,443L685,443L688,449L685,450L681,462L679,467L676,467L679,469L677,474L675,474L676,477L672,488L673,491L671,497L672,501L669,502L668,504L672,505L670,508L671,513L675,512L677,513L675,517L677,521L676,522L674,520L669,524L669,528L674,529L673,532L669,531ZM758,556L755,555L754,557L751,558L752,554L750,551L754,546L755,547L755,544L754,544L753,540L755,540L757,545L760,549L762,549L765,542L767,542L768,540L770,542L772,540L774,542L765,548ZM670,544L668,546L667,544L665,544L666,542L665,540L665,538L662,538L670,534L672,535L678,532L674,542L676,544L673,545L672,543ZM745,537L745,534L747,534L750,537L748,537L747,540L745,539ZM618,510L616,503L614,502L614,499L612,499L611,496L612,496L610,491L612,488L608,484L613,480L615,482L614,484L613,486L617,485L615,490L618,493L618,500L621,502L622,500L625,500L622,505L624,509ZM719,500L718,503L712,498L715,497L716,490L710,494L709,494L709,491L709,486L716,485L717,489L722,491L722,494L724,495L722,500ZM788,496L784,497L783,496L784,493L781,491L787,492L792,489L793,491L792,494L789,494ZM626,549L626,547L622,546L624,541L618,532L619,528L616,523L618,523L621,521L621,518L618,518L621,517L623,515L624,520L626,520L626,526L623,530L625,531L624,535L627,536L625,540L629,541L627,543L629,545L628,548ZM732,535L734,533L734,531L730,535L727,534L726,531L728,532L719,522L721,520L718,517L717,515L722,514L724,517L723,520L725,522L725,524L728,526L730,523L728,518L732,515L731,510L733,503L735,503L735,511L737,511L738,514L740,515L741,513L741,507L738,500L744,500L745,496L749,498L748,493L750,493L750,490L755,498L755,501L752,500L751,503L748,505L748,523L745,521L744,521L743,525L745,525L747,532L745,534L744,531L741,534L738,532L739,530L737,530L736,536L732,537ZM716,511L716,514L713,513L709,516L709,511L714,508L711,506L712,503L717,504L718,509L717,512ZM783,472L778,475L776,472L778,468L785,467L785,471ZM792,464L792,466L788,468L787,466L790,464L792,462L796,462L797,464ZM715,460L714,463L709,461L711,457L716,456L717,458ZM718,454L718,452L713,450L714,445L717,444L716,441L724,436L721,433L721,428L724,425L726,418L727,419L731,414L730,410L731,410L733,406L739,405L740,407L742,406L739,398L741,399L743,398L741,394L744,392L746,393L745,394L754,387L758,388L759,386L762,390L758,396L756,396L753,405L752,406L751,408L756,406L750,408L750,409L752,409L752,411L750,412L749,409L747,409L747,413L744,416L744,418L742,426L738,424L741,421L740,417L738,419L739,421L737,420L734,424L736,426L735,430L738,431L740,431L742,428L746,429L743,430L741,434L737,435L737,434L730,436L733,438L731,442L729,440L729,443L728,440L725,439L724,444L719,449L719,452ZM603,360L599,360L599,356L602,354L605,353L610,358ZM677,373L675,373L673,371L673,369L676,370L676,367L678,370ZM593,339L592,341L587,340L587,335L591,335L591,329L589,328L591,322L595,319L597,321L601,320L601,317L603,314L602,309L603,308L606,309L605,315L609,317L610,314L613,311L615,315L616,313L615,312L621,310L624,312L623,314L626,314L623,318L624,321L622,323L617,323L616,325L617,327L614,330L611,331L610,330L607,333L612,339L608,340L605,338L601,341L600,336L596,332ZM650,318L648,321L647,318L644,319L646,312L642,308L659,308L657,304L661,302L663,302L661,303L661,305L660,309L662,310L664,307L669,309L671,308L670,311L670,317L668,316L664,319L663,316L661,315L659,317L657,314L653,317L653,320ZM638,321L634,321L633,318L631,319L631,318L635,313L639,312L641,314L638,317L639,317L639,320L641,320L640,322ZM582,308L579,309L577,307L580,300L580,299L584,300L582,305Z","cx":681,"cy":440},{"id":"CHAMPAGNE","d":"M598,276L595,276L594,270L598,268L599,272ZM653,266L651,262L657,262L660,263L661,266L654,268ZM609,254L603,251L597,252L595,247L595,252L593,252L594,247L590,248L587,245L591,244L588,242L589,241L583,242L584,240L583,239L585,236L585,232L580,230L581,227L583,227L580,225L586,224L586,219L589,215L591,214L592,212L589,211L588,213L585,208L583,209L582,207L579,209L576,210L578,213L575,215L573,211L571,212L569,211L569,213L565,211L566,206L562,206L565,201L573,204L573,201L576,199L581,197L583,198L585,195L590,196L594,194L595,191L599,191L601,192L604,190L604,188L601,188L600,186L599,186L597,185L599,183L596,174L593,175L591,173L585,174L583,171L582,174L579,173L581,170L577,167L580,165L582,166L586,161L587,165L590,163L590,165L593,163L595,164L595,166L594,168L598,167L603,172L607,170L611,172L611,168L609,166L612,166L614,167L616,166L622,171L623,170L624,166L634,166L635,168L638,168L642,174L644,175L646,174L650,178L654,178L654,186L661,184L662,186L665,187L658,196L659,203L661,203L663,205L666,205L667,209L669,210L668,216L673,217L673,219L678,222L665,231L666,237L662,238L658,237L653,240L650,237L651,234L648,234L652,231L651,229L648,229L645,231L643,227L644,227L640,225L635,229L630,237L626,235L624,239L620,240L617,245L615,245L614,248L611,247L612,251ZM675,252L670,251L667,247L666,242L670,243L670,246L670,243L675,243L674,245L676,245L673,246L674,249L675,248ZM641,310L641,312L638,311L635,306L638,302L643,299L644,293L649,290L657,289L661,281L659,278L666,275L670,277L671,275L675,277L678,275L682,276L682,279L680,280L678,283L680,284L679,286L671,283L672,286L675,286L669,296L666,297L670,300L669,302L661,302L657,304L659,308L642,308Z","cx":618,"cy":216},{"id":"LANGUEDOC-ROUSSILLON","d":"M530,856L529,854L530,846L529,844L531,843L532,840L526,837L528,836L527,834L521,835L521,839L518,838L519,843L517,844L516,836L518,832L516,830L518,828L516,825L513,829L510,828L509,827L512,824L514,820L513,818L507,817L506,815L511,812L520,813L521,807L525,806L523,804L520,805L523,799L519,797L518,792L516,794L517,793L511,788L509,790L511,792L511,794L506,793L506,796L509,797L506,796L503,798L505,800L510,800L509,804L505,803L505,806L501,804L501,806L497,808L493,805L492,806L494,803L490,803L490,800L495,799L495,798L494,797L491,799L492,794L489,793L490,789L489,787L488,789L487,786L483,785L484,781L482,778L481,773L483,773L484,776L488,778L490,774L492,775L494,774L494,771L496,771L496,768L497,768L496,766L497,764L502,766L503,763L505,764L505,761L508,762L519,758L518,760L521,763L523,759L525,758L523,756L525,755L527,760L530,759L534,760L536,760L537,754L540,757L544,757L543,756L544,752L543,748L548,747L551,743L556,742L557,743L565,739L567,741L571,741L572,739L570,732L570,725L573,725L573,723L570,721L569,717L578,713L578,716L577,722L579,723L583,721L590,727L591,724L593,723L592,719L589,719L592,717L591,715L602,708L602,711L605,711L602,716L599,716L598,718L600,722L598,726L601,728L602,725L603,726L605,725L604,723L611,717L609,712L618,709L622,709L628,704L632,707L631,708L635,710L632,716L635,719L637,719L637,717L640,717L640,719L637,721L636,721L637,723L635,723L631,719L628,724L629,727L632,728L632,732L630,734L628,731L627,733L625,730L619,732L617,731L617,728L614,731L613,730L610,731L612,734L616,733L617,735L620,733L624,736L625,738L627,737L623,743L619,744L617,739L611,741L609,739L608,741L605,741L599,751L597,751L595,749L593,751L594,753L596,756L593,759L590,757L587,762L584,764L582,760L578,760L579,764L574,763L571,765L570,767L575,768L576,771L572,773L561,787L556,801L555,804L557,806L555,811L556,810L556,813L554,812L551,823L547,824L548,826L549,825L555,826L555,825L554,827L556,842L562,845L562,848L565,853L558,854L555,849L550,850L544,847L539,855L537,855L536,854ZM505,780L507,782L506,782L506,786L509,785L511,787L513,786L515,788L518,785L512,783L513,780L511,778L508,780L507,779ZM547,777L555,774L557,776L560,773L556,770L560,767L563,767L563,773L566,773L566,768L561,762L564,763L565,762L564,758L567,755L569,759L570,755L575,753L573,752L573,751L571,752L570,750L566,753L565,750L563,750L565,753L561,757L562,758L563,758L561,762L555,762L552,766L546,768L547,774L543,774L542,777L545,775ZM585,740L585,745L586,745L590,739L590,734L586,736ZM595,736L597,736L598,739L600,737L601,738L598,735L598,731L595,729ZM576,757L579,756L580,754L579,751L576,754ZM614,724L617,724L617,727L620,724L621,725L624,724L625,722L625,721L621,720L621,717L619,718L619,722ZM607,710L606,710L606,706L602,705L602,703L608,702L607,699L616,702L617,705L616,709L612,706L609,707ZM614,744L615,746L609,751L611,749L609,746L608,745L609,743Z","cx":557,"cy":771},{"id":"PROVENCE-CORSE","d":"M981,947L977,951L977,955L980,953L977,958L974,958L971,955L968,956L970,951L967,951L967,947L965,949L962,947L957,946L953,943L951,943L952,941L947,939L948,938L947,936L948,931L950,932L953,931L956,926L949,924L947,926L946,921L942,923L942,922L939,922L943,918L942,916L946,914L947,913L945,911L947,911L947,907L948,906L945,903L943,905L937,905L935,906L936,902L934,899L938,899L939,897L939,895L945,891L941,885L939,886L936,883L933,883L934,881L932,881L934,879L932,879L934,878L933,876L933,873L930,873L941,870L941,873L936,878L937,879L942,878L947,880L949,877L949,881L951,883L949,885L950,888L953,890L958,887L959,889L958,891L960,895L958,897L959,901L957,902L958,903L960,909L959,911L956,910L956,918L959,920L959,924L961,923L961,925L965,923L965,925L968,925L969,928L969,930L962,933L961,935L965,934L968,937L973,934L973,930L975,928L972,924L971,922L973,919L977,916L978,918L983,912L977,910L983,904L982,901L978,903L984,896L983,892L978,891L977,893L973,893L971,891L971,887L979,878L977,872L979,869L981,869L986,872L986,869L989,870L991,868L991,866L993,865L993,863L994,863L995,858L993,852L992,851L992,848L990,847L989,852L987,848L989,845L987,841L991,836L982,834L980,830L982,835L978,837L971,830L969,825L977,823L982,829L985,823L985,817L983,814L985,811L984,808L986,805L985,798L991,796L993,799L993,801L995,817L993,826L989,826L988,829L993,831L998,842L1000,883L990,900L989,926L987,928L988,930L986,932L986,934L983,933L981,935L982,937L984,935L987,936L985,939L980,942ZM956,856L956,859L950,865L933,858L935,858L935,855L939,854L938,852L940,850L938,849L939,845L943,844L943,838L943,841L945,840L947,841L949,840L948,837L953,836L957,833L963,833L966,831L966,828L968,831L970,831L976,836L977,842L977,844L980,845L984,851L984,855L977,852L984,857L980,856L978,858L976,857L978,861L975,864L974,864L972,862L968,864L968,861L969,858L972,857L973,852L971,851L967,854L968,850L966,848L968,840L967,839L962,841L956,847ZM696,762L695,765L692,765L689,758L698,758L701,756L702,757L702,759L708,759L704,760L705,765L702,765L699,762ZM689,758L687,758L687,751L681,744L681,739L685,736L688,737L687,738L690,743L689,751L693,752L693,757ZM829,706L831,699L832,701L833,706ZM747,785L747,792L745,792L743,791L745,787L742,786L742,784L736,783L736,780L733,779L731,779L730,781L726,776L724,778L724,774L729,771L734,771L737,766L739,766L741,770L742,765L744,764L745,764L746,766L747,765L753,766L754,764L754,761L749,761L739,764L737,762L736,758L731,757L729,754L731,752L725,750L723,752L721,749L719,751L720,754L723,755L725,754L726,756L723,759L726,759L728,762L725,766L721,766L720,764L722,759L717,759L715,756L715,752L713,750L711,750L712,752L710,753L708,749L706,751L703,749L699,752L697,746L692,746L691,743L692,741L693,742L692,739L696,738L695,736L690,734L688,736L686,734L688,727L683,725L684,731L683,731L666,729L665,727L671,723L668,721L670,717L672,717L673,719L680,716L685,720L687,719L689,724L691,723L693,726L696,726L697,728L697,723L702,725L707,724L709,729L713,727L725,732L730,732L734,730L736,729L738,733L744,732L746,736L746,744L750,744L751,743L750,736L758,735L761,737L763,741L770,745L771,738L775,739L779,742L781,740L785,742L789,739L792,739L793,737L799,740L800,738L797,733L793,732L796,728L801,729L804,733L801,741L804,739L807,743L810,743L810,746L812,747L817,745L818,745L818,748L821,750L820,753L818,755L816,755L816,757L808,756L806,763L797,770L803,771L803,770L805,771L803,774L804,778L801,779L801,781L799,781L796,779L791,782L791,779L788,780L788,777L786,778L781,784L782,789L776,785L771,786L768,790L769,794L764,795L764,793L766,793L766,790L759,790L759,788L756,787L756,785L754,781L757,780L758,781L760,780L762,781L759,778L758,772L757,772L752,775L753,777L749,782L750,786ZM730,748L732,746L726,745L725,744L725,748Z","cx":845,"cy":812},{"id":"SUD-OUEST","d":"M380,687L378,684L378,687L373,690L369,689L367,687L368,686L364,686L361,684L360,683L362,681L359,679L363,676L358,673L357,667L359,665L365,663L368,665L367,667L371,672L370,675L375,674L375,676L376,677L381,675L384,678L385,680L383,686ZM329,667L328,663L329,662L327,661L327,664L325,666L324,664L318,662L321,656L320,650L319,649L319,648L307,644L306,639L303,639L298,632L288,624L286,619L288,611L284,610L280,603L281,599L287,597L286,595L288,592L283,587L285,580L283,578L282,579L268,576L269,552L274,545L276,544L278,550L293,566L301,592L308,600L309,599L307,596L308,596L303,588L299,568L304,569L308,569L308,566L309,571L316,571L319,573L319,576L320,577L319,580L322,586L324,583L327,587L327,585L329,586L331,590L338,591L342,588L345,591L348,588L351,589L353,593L351,598L353,599L354,601L364,603L361,606L362,607L368,605L369,600L372,602L373,598L376,600L377,605L380,603L386,605L388,604L388,607L386,608L386,611L392,614L391,616L395,617L396,620L390,619L390,622L392,623L390,624L390,627L396,627L395,624L396,623L399,623L399,626L395,631L391,629L390,631L388,630L386,633L383,632L376,635L373,634L371,637L367,636L366,638L368,638L372,644L366,647L367,649L356,653L357,658L355,661L351,659L349,661L349,663L344,663L342,665L341,665L341,662L339,662L335,664L332,664L332,667ZM353,649L357,652L358,650L354,649L353,646L351,644L349,645L351,645L351,648ZM370,609L373,611L374,610L373,607L374,604L373,603L371,604ZM396,613L399,612L402,616L394,616Z","cx":342,"cy":615},{"id":"TOULOUSE-PYRENEES","d":"M269,786L271,781L267,782L267,786L265,785L265,782L263,780L261,786L257,787L256,784L252,782L254,775L252,770L255,768L258,768L262,771L264,776L267,776L268,780L272,780L273,783L270,784L270,786L275,793L274,796L272,795L270,796L268,794L271,789ZM285,754L284,756L280,755L281,751L278,749L278,748L280,748L280,744L285,745L286,743L292,744L292,747L295,745L298,745L297,748L299,748L297,752L293,752L290,751L291,755ZM342,752L342,755L338,752L336,752L336,749L330,748L330,745L332,745L331,739L325,743L321,742L319,738L317,739L316,738L318,736L314,733L311,733L311,728L309,729L309,725L313,723L312,721L316,721L317,720L320,722L325,722L328,724L328,723L335,724L331,728L332,729L330,731L333,730L339,733L342,731L340,731L339,729L334,728L337,726L340,725L341,728L344,729L346,728L347,729L352,726L351,720L355,722L361,719L363,722L359,725L364,730L364,734L366,737L364,737L363,741L360,743L362,745L359,748L356,747L356,745L358,745L357,743L355,742L356,745L352,746L348,742L346,743L348,745L347,751ZM346,737L350,739L350,736L348,736L348,732L345,732ZM324,781L322,780L320,782L317,781L311,777L309,776L310,775L308,772L304,773L303,770L301,770L302,768L299,767L300,763L298,763L299,761L297,759L299,757L301,758L302,757L305,758L305,760L308,760L306,762L307,763L309,763L310,760L312,764L313,762L320,768L325,770L327,773L325,777L328,780L326,782L328,781L326,783ZM483,719L483,721L480,721L480,719L476,718L475,722L471,725L467,721L464,725L461,723L463,719L463,714L461,710L459,708L462,704L462,701L459,701L460,699L456,696L452,700L449,697L452,697L454,694L460,691L461,689L462,693L465,694L469,693L472,694L474,689L476,692L478,692L478,687L482,687L487,690L486,692L489,694L488,699L493,704L485,708L493,709L493,712L490,712L488,715L490,720L488,721L486,718L484,721ZM428,718L428,722L426,722L424,720L421,722L419,721L420,719L416,719L415,716L412,717L411,715L413,713L415,714L413,710L416,704L418,703L419,704L424,699L427,699L430,708L431,711L434,709L434,706L438,706L440,703L442,707L448,709L449,708L450,710L452,708L452,710L454,712L452,714L452,718L449,722L447,721L445,723L441,722L437,719L434,717L433,719L432,717ZM404,698L400,698L400,695L398,698L393,696L389,692L389,688L386,690L380,687L382,692L381,694L379,693L380,691L374,689L378,687L378,684L380,687L383,686L385,682L387,684L390,683L392,684L394,683L396,685L399,684L399,687L403,688L402,686L404,687L411,693L410,697L409,698L406,695L403,696ZM556,695L554,697L549,695L548,699L542,699L542,693L540,692L539,693L538,689L539,687L542,688L545,680L551,685L553,684L553,681L555,683L555,681L558,681L560,680L559,674L562,676L563,671L564,675L568,676L567,680L569,680L568,683L565,684L569,694L565,694L564,697L560,694L558,696ZM529,697L532,692L534,695L533,692L534,690L538,695L538,698L535,698L532,701ZM452,687L451,688L450,687L446,689L442,686L442,682L434,683L434,682L432,680L434,674L433,675L432,672L431,672L428,670L429,668L425,668L423,665L422,664L420,669L416,670L412,665L413,663L420,663L421,661L420,657L418,655L417,649L415,645L417,645L417,648L420,648L420,646L429,645L432,648L434,642L437,644L439,641L441,641L442,645L443,647L440,648L441,649L446,648L448,652L450,650L452,653L454,653L454,651L455,653L455,652L457,653L456,656L452,655L451,657L452,664L449,665L444,662L440,666L444,668L446,666L450,669L455,668L456,669L455,671L457,673L458,671L460,672L461,670L459,670L461,670L461,674L463,673L463,674L464,679L460,680L458,678L456,680L454,680L453,682L456,684L456,686L457,688ZM515,657L512,663L512,659L510,658L506,658L507,657L506,655L510,653L508,649L511,650L512,646L515,646L516,644L522,644L524,648L522,650L525,653L525,656L522,656L523,658L521,660L517,659ZM530,649L526,646L527,645L526,642L523,641L521,641L521,635L507,635L509,632L508,630L511,629L514,634L517,635L520,630L527,623L528,626L525,629L532,634L533,637L530,637L526,640L529,643L531,640L536,638L535,640L537,643L535,646L532,646Z","cx":419,"cy":705},{"id":"VAL DE LOIRE","d":"M570,542L570,544L567,545L566,541L564,545L561,539L558,538L559,533L556,533L555,530L559,528L556,523L557,519L551,517L551,514L553,512L558,513L557,515L559,515L559,511L555,511L556,510L555,508L561,504L562,504L559,509L562,509L565,514L563,514L561,520L564,521L564,523L573,522L573,526L577,529L575,531L572,529L572,531L569,531L573,534L573,538L566,538L565,540ZM567,556L562,557L559,555L560,553L562,554L566,554L567,552L568,555ZM561,479L562,475L560,472L562,470L564,471L567,466L565,464L567,462L568,457L566,454L569,450L571,450L575,451L575,455L574,464L577,469L576,472L574,475L574,474L572,473L567,479L563,480ZM518,446L518,448L515,450L511,451L510,448L514,442ZM362,439L361,435L359,433L357,435L354,433L352,435L346,436L348,432L346,424L348,423L355,426L355,424L356,424L355,423L356,421L363,417L365,421L368,421L370,422L371,420L372,423L371,425L372,427L374,424L375,427L379,426L383,433L382,434L383,437L375,439L374,435L372,435L370,435L371,437L367,437L365,440ZM442,458L441,459L438,456L436,457L434,455L435,453L432,451L435,444L435,441L439,436L434,434L432,427L431,428L423,424L423,422L426,422L426,421L424,417L424,414L418,415L417,421L415,422L417,427L415,427L411,421L412,419L413,409L414,407L413,406L416,406L418,403L415,400L416,399L414,395L412,395L411,391L417,388L417,386L419,386L421,382L414,374L410,375L404,373L404,377L402,378L400,377L399,372L390,373L389,375L392,380L392,383L390,382L390,385L386,384L386,382L382,383L380,389L382,389L382,391L378,391L379,395L376,395L373,396L365,395L363,398L360,397L362,394L361,392L359,393L357,392L358,391L354,391L351,386L350,391L345,392L346,394L350,393L352,395L350,399L351,400L348,400L350,401L348,404L346,405L343,404L337,409L334,409L334,406L332,405L331,407L333,407L331,410L320,402L322,401L320,400L321,396L317,396L315,398L317,395L313,395L315,392L314,391L309,393L308,395L311,400L308,402L304,401L305,399L302,397L305,394L302,393L301,390L306,388L312,380L306,378L307,373L303,376L298,372L294,375L291,373L288,374L285,371L279,375L277,371L275,373L275,372L272,372L267,381L269,386L264,390L264,391L263,393L267,394L269,395L265,399L263,399L261,397L259,400L255,399L255,407L248,410L247,414L242,417L230,414L230,412L233,409L234,403L231,400L227,401L226,397L222,402L216,404L213,397L216,395L221,397L223,393L225,387L228,385L224,384L224,383L221,380L220,383L212,383L215,376L211,375L211,373L219,375L223,381L229,383L229,385L234,386L234,384L238,385L242,384L245,385L248,385L247,381L250,378L248,376L245,378L244,371L247,371L252,369L253,367L251,366L251,361L254,359L256,360L255,361L259,362L260,360L263,359L265,357L269,359L269,363L272,360L275,354L277,353L279,355L282,354L286,359L287,358L300,362L304,358L306,358L307,356L306,355L308,355L309,352L312,351L312,354L314,354L313,353L315,350L314,347L319,343L322,347L326,348L324,352L320,352L319,353L318,352L317,354L318,357L313,358L313,359L310,360L312,362L311,362L312,363L313,363L314,362L321,362L328,364L328,367L324,370L323,373L330,372L329,375L332,376L340,374L342,372L346,374L346,371L345,370L347,368L352,370L354,369L357,370L358,367L359,367L366,371L370,365L373,364L375,367L381,366L380,361L386,358L387,360L388,361L388,359L391,361L392,364L382,368L379,371L375,372L370,376L370,377L373,375L375,376L374,374L380,371L383,372L382,375L384,376L388,373L390,373L392,366L394,363L394,360L396,360L398,358L396,357L395,358L393,355L397,354L400,357L404,358L405,352L413,351L416,354L419,353L419,350L426,348L425,345L427,343L432,344L434,346L439,342L441,344L446,339L450,338L455,334L455,332L458,330L459,328L458,325L459,324L460,325L460,322L462,320L461,317L464,319L467,316L470,318L475,317L477,311L478,312L480,311L482,312L485,310L485,313L489,311L491,317L484,315L484,314L479,315L481,320L480,323L479,321L475,321L473,326L469,326L466,322L462,325L461,329L465,331L466,334L465,335L464,333L459,334L456,339L453,338L451,339L449,344L452,346L453,349L455,350L452,352L452,354L449,359L452,360L455,358L455,364L452,366L452,369L458,374L463,371L465,372L464,375L470,375L477,377L479,380L480,387L482,384L487,384L486,387L488,388L492,384L497,388L498,391L496,393L498,395L495,396L493,394L493,389L490,390L490,395L493,398L488,399L492,403L495,403L494,407L496,408L495,409L497,411L495,412L493,415L494,418L495,419L498,414L501,415L501,418L503,422L500,428L501,431L500,434L503,437L498,444L502,445L503,442L504,443L506,442L506,445L504,449L501,448L497,452L494,451L492,454L490,451L491,447L489,447L488,444L484,446L484,449L483,449L480,448L479,445L475,448L471,447L471,445L468,443L468,448L470,448L471,451L468,452L465,451L465,449L463,448L455,448L453,446L451,456L447,453ZM398,364L396,364L397,366L400,367L402,366L402,363ZM427,376L424,379L426,381L430,381L433,375L428,375ZM393,394L393,397L391,399L388,395L388,393L388,391L392,389L396,389ZM529,383L527,382L523,383L522,382L521,384L521,387L518,386L515,389L513,386L515,385L513,383L514,377L516,377L518,374L520,376L525,374L533,377L535,375L533,372L535,371L533,367L535,365L537,366L538,363L542,361L543,363L547,363L548,360L544,352L539,354L535,351L539,346L535,343L533,338L525,334L526,333L528,327L530,329L530,328L532,329L532,330L535,333L535,336L539,342L544,345L547,342L547,352L549,354L550,353L555,358L559,356L561,358L561,362L555,362L557,366L550,366L547,370L545,369L545,367L544,370L547,373L543,375L544,379L540,376L535,380L534,382L530,383ZM384,346L382,349L379,349L375,346L374,347L367,344L364,339L373,340L373,335L376,335L377,332L377,328L378,330L380,330L382,326L388,326L390,320L392,323L393,322L395,321L397,325L398,323L400,325L401,324L401,322L404,323L408,319L411,322L411,320L410,317L413,317L416,315L419,319L422,320L423,328L421,327L420,330L417,331L417,330L415,332L414,331L413,333L411,330L410,332L407,331L405,336L402,332L400,333L399,331L396,331L393,336L391,333L389,337L386,337L388,340Z","cx":392,"cy":387},{"id":"VALLEE DU RHÔNE","d":"M657,725L654,725L653,726L653,731L650,736L653,737L652,739L643,745L642,742L640,741L641,739L637,739L636,729L636,727L639,726L637,722L640,717L642,717L641,714L637,713L637,710L631,708L633,706L636,706L638,704L638,702L635,701L635,699L632,697L631,703L628,704L624,708L621,704L619,704L620,706L619,708L618,706L617,709L616,709L616,703L611,700L610,697L612,698L615,694L625,696L622,691L622,685L625,685L625,689L627,689L628,691L633,694L639,691L640,689L638,687L640,686L642,687L646,688L647,686L649,686L649,681L650,680L647,679L648,673L644,673L643,671L641,670L640,668L643,665L647,665L649,661L651,663L652,660L651,660L645,655L649,649L652,650L653,655L656,651L666,653L666,656L668,655L669,646L672,648L675,646L679,653L687,650L694,649L695,652L698,657L697,660L700,662L700,665L698,667L701,668L701,673L705,676L706,680L711,683L709,690L711,697L714,699L719,697L722,703L728,704L729,707L730,707L726,713L726,717L740,714L741,711L745,710L745,706L749,706L749,710L745,718L753,720L757,718L756,720L758,721L751,723L751,725L747,727L746,724L742,723L738,729L735,729L730,732L722,732L711,725L705,724L702,725L692,720L692,718L695,717L694,715L695,714L694,711L696,708L695,707L695,703L692,701L686,702L689,710L687,710L689,714L679,708L671,706L675,704L674,702L670,703L670,708L666,712L665,712L664,710L662,712L666,718L663,726ZM669,691L672,692L674,690L674,687L671,685L670,684ZM685,693L683,698L684,702L686,700L691,697L688,692ZM652,702L651,706L648,707L650,709L650,713L652,716L655,714L654,712L654,707L655,704L657,705L657,707L659,706L657,705L657,699L654,699ZM713,714L712,719L718,717L721,717L721,714ZM665,670L665,673L669,672L671,663L670,659L666,659ZM761,728L759,731L756,728L758,725L763,725L763,727ZM719,643L716,641L716,637L712,635L713,630L711,633L708,632L709,635L707,637L704,632L701,632L701,634L692,633L692,627L695,626L696,622L698,622L699,620L703,623L708,622L709,619L712,621L716,622L717,625L720,624L722,621L727,623L726,620L732,625L729,626L729,631L726,633L725,633L725,635L722,637L722,642L721,640ZM673,623L675,619L679,619L680,617L682,620L681,624ZM671,609L675,608L674,606L678,601L675,601L676,599L673,596L674,594L672,590L674,584L671,582L669,583L670,581L673,580L674,577L673,574L674,574L675,572L667,570L671,567L669,566L670,565L669,562L670,561L668,558L672,553L670,551L672,552L673,550L675,548L680,549L674,555L672,555L671,560L674,565L673,568L676,572L676,584L680,587L680,591L682,590L685,591L686,596L685,598L679,602L681,606L678,611L671,611Z","cx":676,"cy":686}]};
+const BASSINS = [
+  ["SUD-OUEST", "Sud-Ouest", "Sud-Ouest (Bordeaux, Bergerac…)"], ["TOULOUSE-PYRENEES", "Toulouse-Pyrénées", "Toulouse-Pyrénées (Cahors, Gaillac, Madiran…)"],
+  ["VAL DE LOIRE", "Loire", "Val de Loire"], ["CHAMPAGNE", "Champagne", "Champagne"], ["ALSACE ET EST", "Alsace", "Alsace et Est"],
+  ["BOURGOGNE BEAUJOLAIS SAVOIE JURA", "Bourgogne", "Bourgogne, Beaujolais, Savoie, Jura"], ["VALLEE DU RHÔNE", "Rhône", "Vallée du Rhône"],
+  ["LANGUEDOC-ROUSSILLON", "Languedoc", "Languedoc-Roussillon"], ["PROVENCE-CORSE", "Provence", "Provence-Corse"],
+  ["VIN DOUX NATURELS", "VDN", "Vins doux naturels"], ["COGNAC", "Cognac", "Cognac"], ["ARMAGNAC", "Armagnac", "Armagnac"]
+];
+const bassinName = (id, short) => { const b = BASSINS.find(x => x[0] === id); return b ? b[short ? 1 : 2] : ""; };
+const BASSIN_WORDS = [
+  ["VIN DOUX NATURELS", "banyuls|maury|rivesaltes|muscat de (beaumes|rivesaltes|frontignan|lunel|mireval|saint jean)|vin doux naturel|vdn"],
+  ["COGNAC", "cognac|pineau"], ["ARMAGNAC", "armagnac|floc"],
+  ["TOULOUSE-PYRENEES", "cahors|gaillac|fronton|madiran|jurancon|irouleguy|pacherenc|saint mont|marcillac|tursan|bearn|gascogne|brulhois|lavilledieu"],
+  ["SUD-OUEST", "bordeaux|bordelais|medoc|haut medoc|saint julien|pauillac|margaux|saint estephe|listrac|moulis|pomerol|lalande|saint emilion|fronsac|graves|pessac|leognan|sauternes|barsac|entre deux mers|blaye|bourg|castillon|bergerac|monbazillac|pecharmant|duras|marmandais|loupiac|cadillac|sud ouest"],
+  ["CHAMPAGNE", "champagne|coteaux champenois|riceys"],
+  ["ALSACE ET EST", "alsace|lorraine|cotes de toul|moselle"],
+  ["VAL DE LOIRE", "loire|sancerre|pouilly fume|menetou|quincy|reuilly|vouvray|montlouis|chinon|bourgueil|saint nicolas|saumur|anjou|savennieres|layon|bonnezeaux|quarts de chaume|muscadet|touraine|cheverny|jasnieres|nantais"],
+  ["VALLEE DU RHÔNE", "rhone|chateauneuf|crozes|hermitage|saint joseph|cornas|cote rotie|condrieu|gigondas|vacqueyras|rasteau|cairanne|lirac|tavel|ventoux|luberon|costieres|vinsobres|beaumes de venise|saint peray|grignan|clairette de die|diois"],
+  ["BOURGOGNE BEAUJOLAIS SAVOIE JURA", "bourgogne|chablis|beaujolais|morgon|fleurie|moulin a vent|brouilly|julienas|chenas|chiroubles|regnie|saint amour|macon|maconnais|pouilly fuisse|saint veran|meursault|puligny|chassagne|beaune|pommard|volnay|nuits|gevrey|chambolle|vosne|vougeot|morey|aloxe|corton|savigny|santenay|mercurey|givry|rully|montagny|marsannay|fixin|irancy|savoie|jura|arbois|chateau chalon|vin jaune|apremont|chignin|bugey|saint aubin|auxey|monthelie|ladoix|pernand|chorey|saint romain"],
+  ["LANGUEDOC-ROUSSILLON", "languedoc|roussillon|corbieres|minervois|fitou|faugeres|saint chinian|pic saint loup|picpoul|larzac|la clape|limoux|collioure|cotes catalanes|pays d oc|cabardes|malepere|saint guilhem"],
+  ["PROVENCE-CORSE", "provence|bandol|cassis|bellet|palette|coteaux d aix|baux|sainte victoire|corse|patrimonio|ajaccio|calvi|porto vecchio|varois"]
+].map(([id, w]) => [id, new RegExp("\\b(" + w + ")\\b")]);
+const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ");
+function guessBassin(...texts) { for (const t of texts) { const n = " " + norm(t) + " "; if (!n.trim()) continue; for (const [id, re] of BASSIN_WORDS) if (re.test(n)) return id; } return ""; }
+const bassinOf = w => w.bassin || guessBassin(w.appellation, w.region, w.name, w.domain);
+/* Producer towns: wine fields town, townDep, lat, lon. Projection matches GEO (equirectangular over metropolitan France). */
+const projXY = (lon, lat) => [(lon - GEO.p[0]) * GEO.p[2], (GEO.p[1] - lat) * GEO.p[3]];
+const hasTown = o => o && o.town && o.lat != null && o.lon != null && o.lat !== "" && o.lon !== "";
+const townKey = o => o.town + "|" + (o.townDep || "");
+const townLabel = o => o.town + (o.townDep ? " (" + o.townDep + ")" : "");
+/* What the map shows: bottles in the cellar, or every bottle drunk so far */
+function mapItems() {
+  if (S.mapMode === "bues") return S.drunkAll.map(d => { const w = S.wines.find(x => x.id === d.wineId) || {};
+    const t = hasTown(d) ? d : w; return { n: 1, bassin: d.bassin || bassinOf({ ...w, ...d, bassin: d.bassin || w.bassin }), town: t.town, townDep: t.townDep, lat: t.lat, lon: t.lon, name: d.name, vintage: d.vintage, color: d.color, at: d.at, domain: d.domain || w.domain }; });
+  return S.wines.filter(w => count(w)).map(w => ({ n: count(w), bassin: bassinOf(w), town: w.town, townDep: w.townDep, lat: w.lat, lon: w.lon, name: w.name, vintage: w.vintage, color: w.color, domain: w.domain, id: w.id }));
+}
+function renderMap() {
+  const box = $("#map"); if (!box) return;
+  const bues = S.mapMode === "bues", items = mapItems();
+  const per = {}; let none = 0;
+  for (const it of items) { if (it.bassin) per[it.bassin] = (per[it.bassin] || 0) + it.n; else none += it.n; }
+  const max = Math.max(1, ...Object.values(per));
+  const towns = new Map();
+  for (const it of items) if (hasTown(it)) { const k = townKey(it); const t = towns.get(k) || { ...it, n: 0, names: new Set() }; t.n += it.n; t.names.add(it.name + (it.vintage ? " " + it.vintage : "")); towns.set(k, t); }
+  const tmax = Math.max(1, ...[...towns.values()].map(t => t.n));
+  const paths = GEO.b.map(b => { const n = per[b.id] || 0, on = S.bassin === b.id;
+    const op = n ? (.22 + .6 * n / max).toFixed(2) : 0;
+    return `<path d="${b.d}" class="bz${n ? " has" : ""}${on ? " on" : ""}" style="--o:${op}" data-b="${esc(b.id)}" tabindex="0" role="button" aria-pressed="${on}" aria-label="${esc(bassinName(b.id))} : ${n} bouteille(s)"><title>${esc(bassinName(b.id))} · ${n} bouteille(s)${bues ? " bue(s)" : ""}</title></path>`; }).join("");
+  const labels = GEO.b.filter(b => per[b.id]).map(b => `<g class="bl" transform="translate(${b.cx} ${b.cy})"><circle r="30"></circle><text class="c" y="11">${per[b.id]}</text><text class="t" y="62">${esc(bassinName(b.id, true))}</text></g>`).join("");
+  const dots = [...towns.values()].sort((a, b) => b.n - a.n).map(t => { const [x, y] = projXY(+t.lon, +t.lat), on = S.town === townKey(t);
+    const r = (7 + 9 * Math.sqrt(t.n / tmax)).toFixed(1), names = [...t.names];
+    return `<g class="town${on ? " on" : ""}" data-t="${esc(townKey(t))}" transform="translate(${x.toFixed(0)} ${y.toFixed(0)})" tabindex="0" role="button" aria-label="${esc(townLabel(t))} : ${t.n} bouteille(s)"><circle r="${r}"></circle><title>${esc(townLabel(t))} · ${t.n} bouteille(s)${bues ? " bue(s)" : ""}\n${esc(names.slice(0, 6).join("\n"))}${names.length > 6 ? "\n…" : ""}</title></g>`; }).join("");
+  const sel = S.town ? towns.get(S.town) : null;
+  const filt = S.bassin || S.town;
+  let note;
+  if (filt) note = `Filtré sur <strong>${esc(S.town ? (sel ? townLabel(sel) : S.town.split("|")[0]) : bassinName(S.bassin))}</strong>. <button class="linkbtn" id="map-clear">Voir toute la France</button>`;
+  else note = bues ? (items.length ? `${items.length} bouteille(s) bue(s) depuis le début. Touchez un bassin ou une ville pour voir lesquelles.` : "Aucune bouteille bue pour l'instant.") : "Touchez un bassin ou la ville d'un producteur pour n'afficher que ses vins.";
+  if (none) note += ` ${none} bouteille(s) sans bassin reconnu${bues ? "" : " : précisez-le sur leur fiche"}.`;
+  const nTown = items.filter(hasTown).length;
+  if (!nTown && items.length) note += ` Indiquez la ville du producteur sur la fiche d'un vin pour le voir apparaître sur la carte.`;
+  let drunkList = "";
+  if (bues && filt) { const ls = items.filter(it => S.town ? hasTown(it) && townKey(it) === S.town : it.bassin === S.bassin).sort((a, b) => (b.at || "").localeCompare(a.at || ""));
+    drunkList = `<div class="hist map-drunk">${ls.map(d => `<div><time>${esc(d.at ? new Date(d.at).toLocaleDateString("fr-FR") : "")}</time><span class="dot c-${d.color || "autre"}"></span><span>${esc(d.name)} ${esc(d.vintage || "")}${d.domain ? ` <span class="muted">· ${esc(d.domain)}</span>` : ""}</span></div>`).join("") || `<span class="muted">Rien ici.</span>`}</div>`; }
+  box.innerHTML = `<div class="seg mapseg" role="group" aria-label="Ce que montre la carte"><button data-mm="cave" aria-pressed="${!bues}">En cave</button><button data-mm="bues" aria-pressed="${bues}">Bues depuis le début</button></div>
+    <svg viewBox="-20 -20 ${GEO.w + 40} ${GEO.h + 40}" role="group" aria-label="Carte de France des vins"><path class="fr" d="${GEO.fr}"></path>${paths}${labels}<g class="towns${bues ? " bues" : ""}">${dots}</g></svg>
+    <p class="muted map-note">${note}</p>${drunkList}`;
+  box.querySelectorAll("[data-mm]").forEach(b => b.onclick = () => { S.mapMode = b.dataset.mm; S.town = null; S.bassin = null; try { localStorage.setItem("cave.map", S.mapMode); } catch (e) {} renderInventory(); });
+  const wire = (sel, attr, key) => box.querySelectorAll(sel).forEach(p => { const go = () => { const v = p.getAttribute(attr); if (key === "bassin") { S.bassin = S.bassin === v ? null : v; S.town = null; } else { S.town = S.town === v ? null : v; S.bassin = null; } renderInventory(); };
+    p.onclick = go; p.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
+  wire("[data-b]", "data-b", "bassin"); wire("[data-t]", "data-t", "town");
+  $("#map-clear") && ($("#map-clear").onclick = () => { S.bassin = null; S.town = null; renderInventory(); });
+}
+/* Find which bassin a point falls in, using the map's own shapes */
+function bassinAt(lon, lat) {
+  const ns = "http://www.w3.org/2000/svg"; let svg = document.getElementById("hit-svg");
+  if (!svg) { svg = document.createElementNS(ns, "svg"); svg.id = "hit-svg"; svg.setAttribute("aria-hidden", "true"); svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+    for (const b of GEO.b) { const pth = document.createElementNS(ns, "path"); pth.setAttribute("d", b.d); pth.dataset.b = b.id; svg.append(pth); } document.body.append(svg); }
+  const [x, y] = projXY(lon, lat);
+  try { for (const pth of svg.children) if (pth.isPointInFill(new DOMPoint(x, y))) return pth.dataset.b; } catch (e) {}
+  return "";
+}
+/* Communes list (name|dep|lon|lat), loaded the first time the wine form needs it */
+let COMMUNES_P = null, COMMUNES_L = null;
+function loadCommunes() {
+  if (!COMMUNES_P) COMMUNES_P = loadScript("communes.js").then(() => { COMMUNES_L = window.COMMUNES.split("\n").map(l => { const [n, d, lo, la] = l.split("|"); return { n, d, lon: +lo, lat: +la, k: norm(n).trim() }; }); return COMMUNES_L; })
+    .catch(e => { COMMUNES_P = null; throw e; });
+  return COMMUNES_P;
+}
+function findCommunes(q, lim = 8) {
+  if (!COMMUNES_L) return []; const k = norm(q).trim(); if (k.length < 2) return [];
+  const dm = q.match(/\((\w{2,3})\)\s*$/); const kk = dm ? norm(q.replace(/\(.*$/, "")).trim() : k;
+  const a = [], b = [];
+  for (const c of COMMUNES_L) { if (dm && c.d !== dm[1]) continue; if (c.k === kk) a.unshift(c); else if (c.k.startsWith(kk)) a.push(c); else if (kk.length > 3 && c.k.includes(kk)) b.push(c); if (a.length > 40) break; }
+  return a.concat(b).slice(0, lim);
+}
+const COLORS = [
+  ["rouge","Rouge"],["blanc","Blanc"],["rose","Rosé"],["bulles","Effervescent"],["liquoreux","Liquoreux"],["autre","Autre"]
+];
+const colorLabel = c => (COLORS.find(x => x[0] === c) || COLORS[5])[1];
+const YEAR = new Date().getFullYear();
+const S = { bassin: null, town: null, mapMode: "cave", drunkAll: [], mode: "etageres", level: {}, db: null, cellars: [], cellarId: null, racks: [], wines: [], drunk: [], view: "cave", filter: "", q: "", sort: "name", highlight: null, move: null, ready: false, err: "" };
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rowName = i => { let s = "", n = i; do { s = String.fromCharCode(65 + n % 26) + s; n = Math.floor(n / 26) - 1; } while (n >= 0); return s; };
+const slotKey = (rack, r, c, l) => rack + "|" + r + "|" + c + (l ? "|1" : "");
+/* Shelves with a second row laid on top of the first (rk.stacked = row indexes); that upper row holds one bottle less, offset by half a place */
+const stackedRows = rk => new Set((rk.stacked || []).map(Number).filter(r => r < rk.rows));
+const upCols = rk => Math.max(1, rk.cols - 1);
+const capOf = rk => rk.rows * rk.cols + stackedRows(rk).size * upCols(rk);
+const usedIn = (rk, occ) => { let n = 0; for (const k of occ.keys()) if (k.startsWith(rk.id + "|")) n++; return n; };
+const posLabel = (r, c, l) => rowName(+r) + (+c + 1) + (+l ? " (dessus)" : "");
+const rackById = id => S.racks.find(r => r.id === id);
+/* Caves: each rack and each wine's unplaced bottles belong to one cellar; old records without cellarId go to the first cellar */
+const sortedCellars = () => [...S.cellars].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.name || "").localeCompare(b.name || ""));
+const firstCellarId = () => sortedCellars()[0]?.id;
+const cur = () => S.cellars.find(c => c.id === S.cellarId) || sortedCellars()[0] || null;
+const curId = () => cur()?.id;
+const rackCellar = rk => rk.cellarId || firstCellarId();
+const wineCellar = w => w.cellarId || firstCellarId();
+const racksOf = id => S.racks.filter(r => rackCellar(r) === id);
+const curRacks = () => racksOf(curId());
+const slotCellar = k => { const rk = rackById(k.split("|")[0]); return rk ? rackCellar(rk) : null; };
+const slotLabel = k => { const [rid, r, c, l] = k.split("|"); const rk = rackById(rid); const other = rk && rackCellar(rk) !== curId() ? (S.cellars.find(c => c.id === rackCellar(rk))?.name || "?") + " · " : "";
+  return other + (rk ? rk.name : "?") + " · " + posLabel(r, c, l); };
+const slotsIn = (w, id) => (w.slots || []).filter(k => slotCellar(k) === id);
+const countIn = (w, id) => slotsIn(w, id).length + (wineCellar(w) === id ? (+w.loose || 0) : 0);
+const count = w => countIn(w, curId());
+const total = w => (w.slots || []).length + (+w.loose || 0);
+function occupancy() { const m = new Map(); for (const w of S.wines) for (const k of (w.slots || [])) m.set(k, w); return m; }
+function drinkState(w) {
+  const a = +w.drinkFrom || 0, b = +w.drinkUntil || 0;
+  if (b && YEAR > b) return ["late", "À boire vite"];
+  if (a && YEAR < a) return ["wait", "À garder → " + a];
+  if (a || b) return ["now", "À boire" + (b ? " → " + b : "")];
+  return null;
+}
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; $("#toast-root").replaceChildren(t); setTimeout(() => t.remove(), 2600); }
+async function save(fn, okMsg) {
+  if (!S.db) { toast("Enregistrement impossible : ouvrez la page connecté à claude.ai."); return false; }
+  try { await fn(); if (okMsg) toast(okMsg); return true; }
+  catch (e) { toast("Échec de l'enregistrement : " + (e && e.message || e)); return false; }
+}
+
+/* ---------- Render ---------- */
+function render() {
+  $("#view-cave").hidden = S.view !== "cave";
+  $("#view-inventaire").hidden = S.view !== "inventaire";
+  $("#view-reglages").hidden = S.view !== "reglages";
+  $("#summary").hidden = S.view === "reglages";
+  document.querySelectorAll("nav.tabs button[data-view]").forEach(b => b.setAttribute("aria-selected", b.dataset.view === S.view));
+  $("#cellar-name").textContent = cur()?.name || "Ma Cave";
+  renderSummary(); renderLegend(); renderBanner(); renderRacks(); renderInventory(); renderCellars();
+}
+function renderCellars() {
+  const root = $("#cellars");
+  if (!S.ready) { root.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "Chargement…"}</div>`; return; }
+  if (!S.cellars.length) { root.innerHTML = `<div class="empty"><strong>Aucune cave pour l'instant.</strong><span>Créez votre première cave pour y ajouter des casiers.</span></div>`; return; }
+  root.innerHTML = sortedCellars().map(c => {
+    const racks = racksOf(c.id), places = racks.reduce((n, r) => n + capOf(r), 0);
+    const btl = S.wines.reduce((n, w) => n + countIn(w, c.id), 0), on = c.id === curId();
+    return `<div class="cellar${on ? " on" : ""}">
+      <button class="pick-c" role="radio" aria-checked="${on}" data-pick="${c.id}"><span class="radio"></span>
+        <span><span class="cname">${esc(c.name)}</span><br><span class="cmeta">${btl} bouteille${btl > 1 ? "s" : ""} · ${racks.length} casier${racks.length > 1 ? "s" : ""} · ${places} places${on ? " · affichée" : ""}</span></span></button>
+      <span class="actions"><button data-ren="${c.id}">Renommer</button><button class="danger" data-del="${c.id}">Supprimer</button></span>
+      <div class="racklist"><div class="label">Casiers de cette cave</div>
+        ${racks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)).map(rk => { const u = S.wines.reduce((n, w) => n + (w.slots || []).filter(k => k.startsWith(rk.id + "|")).length, 0);
+          return `<div class="rk"><span><strong>${esc(rk.name)}</strong><br><small>${rk.rows} étagère${rk.rows > 1 ? "s" : ""} × ${rk.cols} bouteilles${rk.layout === "quinconce" ? " · en quinconce" : ""}${stackedRows(rk).size ? ` · 2e rangée sur ${stackedRows(rk).size} étagère(s)` : ""} · ${u}/${capOf(rk)} occupées</small></span><button data-rk="${rk.id}">Modifier</button></div>`; }).join("") || `<span class="muted" style="font-size:.88rem">Aucun casier.</span>`}
+        <div><button data-addrk="${c.id}">+ Ajouter un casier</button></div>
+      </div>
+    </div>`;
+  }).join("");
+  root.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => selectCellar(b.dataset.pick));
+  root.querySelectorAll("[data-rk]").forEach(b => b.onclick = () => openRackForm(rackById(b.dataset.rk)));
+  root.querySelectorAll("[data-addrk]").forEach(b => b.onclick = () => openRackForm(null, b.dataset.addrk));
+  root.querySelectorAll("[data-ren]").forEach(b => b.onclick = () => openCellarForm(S.cellars.find(c => c.id === b.dataset.ren)));
+  root.querySelectorAll("[data-del]").forEach(b => b.onclick = () => openCellarForm(S.cellars.find(c => c.id === b.dataset.del), true));
+}
+function selectCellar(id, quiet) {
+  S.cellarId = id; S.highlight = null; S.move = null; S.filter = ""; render();
+  if (!quiet) save(() => S.db.doc("settings/display").set({ cellarId: id }), "Cave affichée : " + (cur()?.name || ""));
+}
+function openCellarForm(c, del) {
+  const racks = c ? racksOf(c.id) : [], btl = c ? S.wines.reduce((n, w) => n + countIn(w, c.id), 0) : 0;
+  sheet(`<header><div><h2>${!c ? "Nouvelle cave" : del ? "Supprimer la cave" : "Renommer la cave"}</h2>${!c ? `<div class="muted">Elle sera affichée dès sa création. Vous y ajouterez ensuite vos casiers.</div>` : ""}</div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    ${del ? (S.cellars.length < 2 ? `<p style="margin:0">C'est votre seule cave : créez-en une autre avant de supprimer celle-ci.</p><div class="actions"><button data-close>Fermer</button></div>`
+      : racks.length || btl ? `<p style="margin:0">« ${esc(c.name)} » contient encore ${racks.length} casier(s) et ${btl} bouteille(s). Videz-la et supprimez ses casiers avant de la supprimer.</p><div class="actions"><button data-close>Fermer</button></div>`
+      : `<p style="margin:0">Supprimer la cave « ${esc(c.name)} » ? Elle est vide.</p><div class="actions"><button class="danger" id="c-del-ok">Supprimer</button><button data-close>Annuler</button></div>`)
+    : `<form class="form" id="cf"><label class="full" for="c-name">Nom de la cave<input id="c-name" required value="${esc(c?.name || "")}" placeholder="ex. Cave de la maison, Cave électrique, Maison de campagne…"></label>
+      <div class="actions full"><button class="primary" type="submit">${c ? "Enregistrer" : "Créer la cave"}</button><button type="button" data-close>Annuler</button></div></form>`}`, () => {
+    $("#cf") && ($("#cf").onsubmit = async e => {
+      e.preventDefault(); const name = $("#c-name").value.trim(); if (!name) return; close();
+      if (c) save(() => S.db.doc("cellars/" + c.id).update({ name }), "Cave renommée");
+      else { let ref; const ok = await save(async () => { ref = await S.db.collection("cellars").add({ name, order: S.cellars.length }); }, "Cave créée");
+        if (ok && ref) { S.cellarId = ref.id; S.db.doc("settings/display").set({ cellarId: ref.id }).catch(() => {}); render(); } }
+    });
+    $("#c-del-ok") && ($("#c-del-ok").onclick = async () => {
+      close(); const ok = await save(() => S.db.doc("cellars/" + c.id).delete(), "Cave supprimée");
+      if (ok && S.cellarId === c.id) { const next = sortedCellars().find(x => x.id !== c.id); if (next) selectCellar(next.id, true), S.db.doc("settings/display").set({ cellarId: next.id }).catch(() => {}); }
+    });
+  });
+}
+function renderSummary() {
+  const total = S.wines.reduce((n, w) => n + count(w), 0);
+  const byColor = {}; for (const w of S.wines) byColor[w.color || "autre"] = (byColor[w.color || "autre"] || 0) + count(w);
+  const urgent = S.wines.filter(w => count(w) && drinkState(w)?.[0] === "late").reduce((n, w) => n + count(w), 0);
+  const slots = curRacks().reduce((n, r) => n + capOf(r), 0);
+  const placed = S.wines.reduce((n, w) => n + slotsIn(w, curId()).length, 0);
+  $("#summary").innerHTML = `
+    <div class="hero"><span class="n">${total}</span><span class="u">bouteille${total > 1 ? "s" : ""}</span></div>
+    <div class="rule"></div>
+    <div class="stats"><span><b>${S.wines.filter(w => count(w)).length}</b> références</span><span><b>${slots ? slots - placed : 0}</b> places libres</span>${urgent ? `<span class="warn"><b>${urgent}</b> à boire vite</span>` : ""}</div>
+    <div class="chips">${COLORS.filter(([c]) => byColor[c]).map(([c, l]) => `<span class="chip"><span class="dot c-${c}"></span>${l} ${byColor[c]}</span>`).join("")}</div>`;
+  renderSoon();
+}
+function renderSoon() {
+  const ws = S.wines.filter(w => count(w) && drinkState(w) && drinkState(w)[0] !== "wait").sort((a, b) => (+a.drinkUntil || 9999) - (+b.drinkUntil || 9999)).slice(0, 10);
+  $("#soon").innerHTML = ws.length ? `<h2>À ouvrir bientôt</h2><div class="soon">${ws.map(w => `<button class="label-card" data-sw="${w.id}"><span class="v">${esc(w.vintage || "NM")}</span><span class="n">${esc(w.name)}</span><span class="r">${esc(w.appellation || w.region || "")}</span>${drinkState(w)[0] === "late" ? `<span class="late">À boire vite</span>` : `<span class="r">avant ${esc(w.drinkUntil || "—")}</span>`}</button>`).join("")}</div>` : "";
+  $("#soon").querySelectorAll("[data-sw]").forEach(b => b.onclick = () => openWine(b.dataset.sw));
+}
+function renderLegend() {
+  $("#legend").innerHTML = COLORS.slice(0, 5).map(([c, l]) => `<span><span class="dot c-${c}"></span>${l}</span>`).join("") + `<span class="muted">Touchez une place pour ranger ou sortir une bouteille.</span>`;
+}
+function renderBanner() {
+  const b = $("#banner");
+  if (S.move) {
+    const w = S.wines.find(x => x.id === S.move.wineId);
+    b.innerHTML = `<div class="banner"><p>Déplacement de <strong>${esc(w?.name)}</strong> depuis ${esc(slotLabel(S.move.from))} : touchez une place libre.</p><button id="cancel-move">Annuler</button></div>`;
+    $("#cancel-move").onclick = () => { S.move = null; render(); };
+  } else if (S.highlight) {
+    const w = S.wines.find(x => x.id === S.highlight);
+    b.innerHTML = `<div class="banner"><p>Emplacements de <strong>${esc(w?.name)}</strong> ${esc(w?.vintage || "")}</p><button id="clear-hl">Tout afficher</button></div>`;
+    $("#clear-hl").onclick = () => { S.highlight = null; render(); };
+  } else b.innerHTML = "";
+}
+function renderRacks() {
+  const root = $("#racks");
+  if (!S.ready) { root.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "Chargement de votre cave…"}</div>`; return; }
+  if (!S.cellars.length) {
+    root.innerHTML = `<div class="empty"><strong>Aucune cave pour l'instant.</strong><span>Créez votre première cave dans les réglages.</span><button class="primary" id="first-cellar">Créer ma première cave</button></div>`;
+    $("#first-cellar").onclick = () => openCellarForm(); return;
+  }
+  if (!curRacks().length) {
+    root.innerHTML = `<div class="empty"><strong>Aucun casier dans « ${esc(cur()?.name)} ».</strong><span>Créez un casier en indiquant son nombre de rangées et de colonnes, puis rangez-y vos bouteilles.</span><button class="primary" id="first-rack">Créer mon premier casier</button></div>`;
+    $("#first-rack").onclick = () => openRackForm(null, curId()); return;
+  }
+  const occ = occupancy();
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === S.mode));
+  if (S.mode !== "3d") stop3D();
+  if (S.mode === "3d") return render3D(root, occ);
+  if (S.mode === "etageres") return renderCabinets(root, occ);
+  root.innerHTML = "";
+  for (const rk of curRacks().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))) {
+    const used = usedIn(rk, occ), stk = stackedRows(rk);
+    const el = document.createElement("div"); el.className = "rack";
+    let g = `<div class="grid" style="grid-template-columns: 22px repeat(${rk.cols}, 40px)"><span></span>`;
+    for (let c = 0; c < rk.cols; c++) g += `<span class="axis">${c + 1}</span>`;
+    const planCell = (k, w, t) => {
+        const cls = ["cell"]; if (w) cls.push("full", "c-" + (w.color || "autre"));
+        if (S.highlight) cls.push(w && w.id === S.highlight ? "hl" : "dim");
+        if (S.move && !w) cls.push("target");
+        if (S.move && S.move.from === k) cls.push("hl");
+        return `<button class="${cls.join(" ")}" data-k="${k}" title="${esc(t)}" aria-label="${esc(t)}"></button>`; };
+    for (let r = 0; r < rk.rows; r++) {
+      if (stk.has(r)) {
+        g += `<span class="axis">${rowName(r)}↑</span>`;
+        for (let c = 0; c < rk.cols; c++) { if (c >= upCols(rk)) { g += "<span></span>"; continue; } const k = slotKey(rk.id, r, c, 1), w = occ.get(k);
+          g += planCell(k, w, posLabel(r, c, 1) + (w ? " : " + w.name + (w.vintage ? " " + w.vintage : "") : " : libre")); }
+      }
+      g += `<span class="axis">${rowName(r)}</span>`;
+      for (let c = 0; c < rk.cols; c++) {
+        const k = slotKey(rk.id, r, c), w = occ.get(k);
+        const cls = ["cell"]; if (w) cls.push("full", "c-" + (w.color || "autre"));
+        if (S.highlight) cls.push(w && w.id === S.highlight ? "hl" : "dim");
+        if (S.move && !w) cls.push("target");
+        if (S.move && S.move.from === k) cls.push("hl");
+        const t = rowName(r) + (c + 1) + (w ? " : " + w.name + (w.vintage ? " " + w.vintage : "") : " : libre");
+        g += `<button class="${cls.join(" ")}" data-k="${k}" title="${esc(t)}" aria-label="${esc(t)}"></button>`;
+      }
+    }
+    g += "</div>";
+    el.innerHTML = `<div class="rack-head"><h3>${esc(rk.name)}</h3><span class="meta">${rk.rows} × ${rk.cols}${stk.size ? " + 2e rangées" : ""} · ${used}/${capOf(rk)} occupées</span></div><div class="rack-scroll">${g}</div>`;
+    root.append(el);
+  }
+  root.querySelectorAll(".cell").forEach(b => b.onclick = () => { if (!S.justDragged) onCell(b.dataset.k); });
+}
+/* ---------- Realistic cabinet view: one wooden cabinet per rack, 3 shelves visible, current shelf lit ---------- */
+function cellClasses(k, w) {
+  const cls = ["cell"]; if (w) cls.push("full");
+  if (S.highlight) cls.push(w && w.id === S.highlight ? "hl" : "dim");
+  if (S.move && !w) cls.push("target");
+  if (S.move && S.move.from === k) cls.push("hl");
+  return cls.join(" ");
+}
+function renderCabinets(root, occ) {
+  root.innerHTML = "";
+  for (const rk of curRacks().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name))) {
+    let shelves = ""; const used = usedIn(rk, occ), stk = stackedRows(rk), q = rk.layout === "quinconce";
+    const cab = (k, w, t, neck) => `<button class="${cellClasses(k, w)}${neck ? " neck" : ""}" data-k="${k}" title="${esc(t)}" aria-label="${esc(t)}"${w ? ` style="--wc:var(--w-${esc(w.color || "autre")})"` : ""}></button>`;
+    const lbl = (r, c, l, w) => posLabel(r, c, l) + (w ? " : " + w.name + (w.vintage ? " " + w.vintage : "") : " : libre");
+    for (let r = 0; r < rk.rows; r++) {
+      let cells = "", up = "";
+      for (let c = 0; c < rk.cols; c++) { const k = slotKey(rk.id, r, c), w = occ.get(k); cells += cab(k, w, lbl(r, c, 0, w), q && c % 2 === 0); }
+      if (stk.has(r)) for (let c = 0; c < upCols(rk); c++) { const k = slotKey(rk.id, r, c, 1), w = occ.get(k); up += cab(k, w, lbl(r, c, 1, w), q && c % 2 === 1); }
+      shelves += stk.has(r)
+        ? `<div class="lvl stk" data-row="${r}"><span class="lvl-tag">${rowName(r)}</span><div class="shelves"><div class="shelf up${q ? " q" : ""}" style="grid-template-columns: repeat(${upCols(rk)}, var(--b))">${up}</div><div class="shelf${q ? " q" : ""}">${cells}</div></div></div>`
+        : `<div class="lvl" data-row="${r}"><span class="lvl-tag">${rowName(r)}</span><div class="shelf${q ? " q" : ""}">${cells}</div></div>`;
+    }
+    const el = document.createElement("div"); el.className = "cab"; el.dataset.rack = rk.id;
+    el.style.setProperty("--cols", rk.cols);
+    el.innerHTML = `<div class="cab-head"><h3>${esc(rk.name)}</h3><span class="meta">${rk.rows} étagères × ${rk.cols} bouteilles${rk.layout === "quinconce" ? " en quinconce" : ""}${stk.size ? " · 2e rangée sur " + stk.size + " étagère(s)" : ""} · ${used}/${capOf(rk)} occupées</span></div>
+      <div class="cab-frame"><div class="cab-view all"><div class="cab-stack">${shelves}</div></div></div>`;
+    root.append(el);
+    sizeCabinet(el, rk);
+  }
+  root.insertAdjacentHTML("beforeend", `<p class="muted" style="margin:0;font-size:.85rem">Touchez une bouteille pour la sortir, une place vide pour ranger. Restez appuyé sur une bouteille puis glissez-la pour la changer de place.</p>`);
+  root.querySelectorAll(".cell").forEach(b => b.onclick = () => { if (!S.justDragged) onCell(b.dataset.k); });
+}
+function sizeCabinet(el, rk) {
+  const view = el.querySelector(".cab-view"); const w = view.clientWidth - 14 - 22 - 6;
+  const gap = rk.cols > 10 ? 4 : 7;
+  const b = Math.max(20, Math.min(62, Math.floor((w - (rk.cols - 1) * gap) / rk.cols)));
+  el.style.setProperty("--b", b + "px"); el.style.setProperty("--gap", gap + "px"); el.style.setProperty("--lh", (b + 26) + "px");
+}
+let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (S.mode === "etageres" && S.view === "cave") renderRacks(); }, 150); });
+
+/* ---------- 3D view (Three.js, loaded on first use) ---------- */
+const T3 = { loading: null, ok: false };
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load " + src)); document.head.append(s); }); }
+function loadThree() {
+  if (!T3.loading) T3.loading = loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js")
+    .then(() => loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js")).then(() => { T3.ok = true; });
+  return T3.loading;
+}
+// Electric service wine cabinet (metres). Standard: bottles side by side, necks out. Quinconce: alternate bottles head-to-tail, tighter pitch.
+const G = { H: 0.108, D: 0.5, wall: 0.035 };
+const pitch = rk => rk.layout === "quinconce" ? 0.064 : 0.082;
+const GLASS = { rouge: 0x1c3020, liquoreux: 0x3a2a10, blanc: 0x6f7f35, bulles: 0x2c3a1c, rose: 0xe6c3bd, autre: 0x30343a };
+const CAPS = { rouge: 0x8c1c2f, blanc: 0xd9be5c, rose: 0xeda3ad, bulles: 0xe8d58a, liquoreux: 0xd08a22, autre: 0x8a8f98 };
+function woodTexture(THREE, base) {
+  const c = document.createElement("canvas"); c.width = 512; c.height = 64; const x = c.getContext("2d");
+  x.fillStyle = base || "#d9a874"; x.fillRect(0, 0, 512, 64);
+  for (let i = 0; i < 60; i++) {
+    const y0 = Math.random() * 64, a = Math.random() * .16 + .03;
+    x.strokeStyle = Math.random() < .6 ? `rgba(120,70,30,${a})` : `rgba(255,230,190,${a})`; x.lineWidth = Math.random() * 1.6 + .3;
+    x.beginPath(); for (let px = 0; px <= 512; px += 8) { const py = y0 + Math.sin(px / 60 + i) * 2 + Math.sin(px / 17 + i * 2) * .6; px ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function canvasTex(THREE, w, h, draw) { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t; }
+function stop3D() { if (T3.raf) cancelAnimationFrame(T3.raf); T3.raf = null; }
+async function render3D(root, occ) {
+  if (!T3.wrap) {
+    T3.wrap = document.createElement("div"); T3.wrap.className = "w3";
+    T3.wrap.innerHTML = `<div class="w3-msg">Chargement de la vue 3D…</div>`;
+  }
+  root.replaceChildren(T3.wrap);
+  try { await loadThree(); } catch (e) { T3.wrap.innerHTML = `<div class="w3-msg">La vue 3D n'a pas pu se charger. Vérifiez la connexion, ou utilisez la vue Étagères.</div>`; return; }
+  if (S.mode !== "3d" || S.view !== "cave") return;
+  if (!T3.renderer && !init3D()) return;
+  const racks = curRacks().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+  if (!racks.find(r => r.id === T3.rackId)) T3.rackId = racks[0].id;
+  const rk = rackById(T3.rackId);
+  T3.top.innerHTML = (racks.length > 1 ? racks.map(r => `<button class="chip" aria-pressed="${r.id === rk.id}" data-r3="${r.id}">${esc(r.name)}</button>`).join("") : `<span class="chip" aria-pressed="false">${esc(rk.name)}</span>`)
+    + `<span class="chip" aria-pressed="false">${rk.rows} clayettes × ${rk.cols}${rk.layout === "quinconce" ? " · quinconce" : ""}</span>`
+    + `<button class="chip" id="w3-door" aria-pressed="${T3.doorOpen ? "true" : "false"}">${T3.doorOpen ? "Fermer la porte" : "Ouvrir la porte"}</button>`;
+  T3.top.querySelectorAll("[data-r3]").forEach(b => b.onclick = () => { T3.rackId = b.dataset.r3; T3.fresh = true; renderRacks(); });
+  $("#w3-door").onclick = e => { T3.doorOpen = !T3.doorOpen; e.currentTarget.setAttribute("aria-pressed", T3.doorOpen); e.currentTarget.textContent = T3.doorOpen ? "Fermer la porte" : "Ouvrir la porte"; };
+  if (S.highlight) { const w = S.wines.find(x => x.id === S.highlight); const k = (w?.slots || []).find(s => s.startsWith(rk.id + "|")); if (k) S.level[rk.id] = +k.split("|")[1]; }
+  if (S.level[rk.id] == null || S.level[rk.id] >= rk.rows) S.level[rk.id] = 0;
+  build3D(rk, occ);
+  resize3D(); level3D(S.level[rk.id], T3.fresh !== false); T3.fresh = false;
+  if (!T3.raf) loop3D();
+}
+function init3D() {
+  const THREE = window.THREE;
+  const probe = document.createElement("canvas");
+  if (!(probe.getContext("webgl2") || probe.getContext("webgl"))) { T3.wrap.innerHTML = `<div class="w3-msg">Cet appareil ne permet pas l'affichage 3D. Utilisez la vue Étagères.</div>`; return false; }
+  T3.wrap.innerHTML = `<div class="w3-top"></div><div class="w3-hint">Glissez pour tourner autour de la cave, pincez ou utilisez la molette pour zoomer. Touchez une bouteille ou une place vide, même porte fermée.</div>
+    <div class="w3-nav"><button data-l="-1" aria-label="Monter d'une clayette">▲</button><div class="lv"></div><button data-l="1" aria-label="Descendre d'une clayette">▼</button><button data-l="0" aria-label="Recentrer la vue">⟲</button></div><div class="w3-tip" hidden></div>`;
+  T3.top = T3.wrap.querySelector(".w3-top"); T3.tip = T3.wrap.querySelector(".w3-tip"); T3.lv = T3.wrap.querySelector(".lv");
+  const r = T3.renderer = new THREE.WebGLRenderer({ antialias: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+  r.outputEncoding = THREE.sRGBEncoding; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
+  T3.wrap.prepend(r.domElement);
+  const sc = T3.scene = new THREE.Scene(); sc.background = new THREE.Color(0x120c13); sc.fog = new THREE.Fog(0x120c13, 2.6, 6);
+  T3.camera = new THREE.PerspectiveCamera(40, 1, 0.02, 20);
+  sc.add(new THREE.HemisphereLight(0xe8eeff, 0x202024, 0.45));
+  const key = T3.key = new THREE.SpotLight(0xfff1dc, 1.4, 6, Math.PI / 6, 0.7, 1.2);
+  key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; sc.add(key); sc.add(key.target);
+  const fill = new THREE.DirectionalLight(0xbfd0ff, 0.25); fill.position.set(-2, 2, 2); sc.add(fill);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: 0x241a20, roughness: .5, metalness: .15 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; sc.add(floor);
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), new THREE.MeshStandardMaterial({ color: 0x1c1418, roughness: 1 }));
+  wall.position.set(0, 3, -G.D / 2 - 0.06); wall.receiveShadow = true; sc.add(wall);
+  T3.mats = {
+    body: new THREE.MeshStandardMaterial({ color: 0x17181b, roughness: .45, metalness: .35 }),
+    inner: new THREE.MeshStandardMaterial({ color: 0x24262b, roughness: .85 }),
+    steel: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: .25, metalness: .95 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0xd8dade, roughness: .2, metalness: .9 }),
+    beech: new THREE.MeshStandardMaterial({ map: woodTexture(THREE), roughness: .6 }),
+    led: new THREE.MeshBasicMaterial({ color: 0xdfeaff }),
+    glass: new THREE.MeshStandardMaterial({ color: 0x9fb0c4, roughness: .05, metalness: .6, transparent: true, opacity: .16, depthWrite: false }),
+    vent: new THREE.MeshStandardMaterial({ roughness: .8, map: canvasTex(THREE, 64, 64, (x, w, h) => { x.fillStyle = "#101113"; x.fillRect(0, 0, w, h); x.fillStyle = "#000"; for (let y = 4; y < h; y += 8) x.fillRect(2, y, w - 4, 3); }) }),
+    hit: new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
+    ring: new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: .6, side: THREE.DoubleSide })
+  };
+  T3.mats.vent.map.wrapS = T3.mats.vent.map.wrapT = THREE.RepeatWrapping;
+  const c = T3.controls = new THREE.OrbitControls(T3.camera, r.domElement);
+  c.enableDamping = true; c.dampingFactor = .08; c.enablePan = false; c.minDistance = .3; c.maxDistance = 3.2;
+  c.minAzimuthAngle = -1; c.maxAzimuthAngle = 1; c.minPolarAngle = .45; c.maxPolarAngle = 2.1; c.rotateSpeed = .6;
+  T3.wrap.querySelectorAll("[data-l]").forEach(b => b.onclick = () => { const d = +b.dataset.l; if (!d) return level3D(S.level[T3.rackId], true); level3D(S.level[T3.rackId] + d); });
+  T3.wrap.tabIndex = 0;
+  T3.wrap.addEventListener("keydown", e => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); level3D(S.level[T3.rackId] + (e.key === "ArrowUp" ? -1 : 1)); } });
+  const ray = new THREE.Raycaster(), v = new THREE.Vector2(); let down = null;
+  const pick = e => { const b = r.domElement.getBoundingClientRect(); v.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(v, T3.camera); const h = ray.intersectObjects(T3.pickables || [], false)[0]; return h ? h.object.userData : null; };
+  r.domElement.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
+  r.domElement.addEventListener("pointerup", e => { if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 6) { const u = pick(e); if (u && u.k) { T3.tip.hidden = true; onCell(u.k); } } down = null; });
+  r.domElement.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse" || e.buttons) { T3.tip.hidden = true; return; }
+    const u = pick(e); setHover(u && u.k);
+    if (u && u.k) { const b = T3.wrap.getBoundingClientRect(); T3.tip.hidden = false; T3.tip.style.left = (e.clientX - b.left) + "px"; T3.tip.style.top = (e.clientY - b.top) + "px"; T3.tip.textContent = u.label; r.domElement.style.cursor = "pointer"; }
+    else { T3.tip.hidden = true; r.domElement.style.cursor = ""; }
+  });
+  r.domElement.addEventListener("pointerleave", () => { T3.tip.hidden = true; setHover(null); });
+  new ResizeObserver(() => resize3D()).observe(T3.wrap);
+  T3.doorOpen = false; T3.doorAngle = 0;
+  return true;
+}
+function setHover(k) {
+  if (T3.hover === k) return; T3.hover = k;
+  for (const g of T3.bottles || []) g.userData.cap.material.emissiveIntensity = g.userData.k === k ? .9 : g.userData.base;
+  for (const m of T3.rings || []) m.visible = m.userData.always || m.userData.k === k;
+}
+function build3D(rk, occ) {
+  const THREE = window.THREE, sc = T3.scene, M = T3.mats;
+  if (T3.cab) { sc.remove(T3.cab); T3.cab.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.userData?.own) o.material.dispose(); }); }
+  const cab = T3.cab = new THREE.Group(); sc.add(cab);
+  const P = pitch(rk), q = rk.layout === "quinconce";
+  const Wi = rk.cols * P + (q ? .05 : .03), wt = G.wall, plinth = .1, topBand = .07;
+  const stk = stackedRows(rk), UP = q ? .066 : .06, hR = r => G.H + (stk.has(r) ? UP : 0);
+  let acc = 0; const ybs = []; for (let r = rk.rows - 1; r >= 0; r--) { ybs[r] = acc; acc += hR(r); }
+  const Hi = acc + .04, Wo = Wi + wt * 2, Ho = Hi + plinth + topBand, D = G.D, zf = D / 2;
+  T3.dims = { W: Wo, H: Ho };
+  const box = (w, h, d, x, y, z, m, par = cab) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; par.add(o); return o; };
+  // Caisson
+  box(wt, Ho, D, -Wo / 2 + wt / 2, Ho / 2, 0, M.body); box(wt, Ho, D, Wo / 2 - wt / 2, Ho / 2, 0, M.body);
+  box(Wo, topBand, D, 0, Ho - topBand / 2, 0, M.body); box(Wo, plinth, D, 0, plinth / 2, 0, M.body);
+  box(Wo, Ho, .02, 0, Ho / 2, -zf + .01, M.body);
+  // Intérieur
+  box(Wi, Hi, .005, 0, plinth + Hi / 2, -zf + .022, M.inner);
+  box(.004, Hi, D - .06, -Wi / 2 + .002, plinth + Hi / 2, -.01, M.inner); box(.004, Hi, D - .06, Wi / 2 - .002, plinth + Hi / 2, -.01, M.inner);
+  const vent = box(Wo - .04, plinth - .03, .004, 0, plinth / 2, zf + .002, M.vent); vent.material = M.vent; M.vent.map.repeat.set(1, 1);
+  // Rubans LED verticaux + lumière intérieure froide
+  for (const sx of [-1, 1]) box(.006, Hi - .02, .006, sx * (Wi / 2 - .008), plinth + Hi / 2, zf - .03, M.led);
+  const inner = new THREE.PointLight(0xdfeaff, .9, Hi * 1.6, 1.5); inner.position.set(0, plinth + Hi - .03, zf - .08); cab.add(inner);
+  const inner2 = new THREE.PointLight(0xdfeaff, .5, Hi * 1.2, 1.5); inner2.position.set(0, plinth + Hi * .35, zf - .08); cab.add(inner2);
+  // Afficheur de température
+  const disp = new THREE.Mesh(new THREE.PlaneGeometry(.11, .028), new THREE.MeshBasicMaterial({ map: canvasTex(THREE, 256, 64, (x, w, h) => {
+    x.fillStyle = "#050607"; x.fillRect(0, 0, w, h); x.fillStyle = "#cfe6ff"; x.font = "600 40px ui-monospace, Menlo, monospace"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("12°C", w / 2, h / 2 + 2);
+    x.fillStyle = "#6fa8ff"; x.beginPath(); x.arc(22, h / 2, 5, 0, 7); x.fill(); x.beginPath(); x.arc(w - 22, h / 2, 5, 0, 7); x.fill(); }) }));
+  disp.material.userData.own = true; disp.position.set(0, Ho - topBand / 2, zf + .051); cab.add(disp);
+  // Porte vitrée (charnière à gauche)
+  const door = T3.door = new THREE.Group(); door.position.set(-Wo / 2, 0, zf + .025); cab.add(door);
+  const fr = .04, dh = Hi + .03, dy = plinth + Hi / 2;
+  box(fr, dh, .045, fr / 2, dy, 0, M.body, door); box(fr, dh, .045, Wo - fr / 2, dy, 0, M.body, door);
+  box(Wo, fr, .045, Wo / 2, dy + dh / 2 - fr / 2, 0, M.body, door); box(Wo, fr, .045, Wo / 2, dy - dh / 2 + fr / 2, 0, M.body, door);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(Wo - fr * 2, dh - fr * 2), M.glass); glass.position.set(Wo / 2, dy, .01); door.add(glass);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, Math.min(.5, dh * .6), 16), M.steel); handle.position.set(Wo - .03, dy, .05); handle.castShadow = true; door.add(handle);
+  for (const hy of [-1, 1]) box(.012, .012, .03, Wo - .03, dy + hy * Math.min(.5, dh * .6) / 2 * .9, .035, M.steel, door);
+  door.rotation.y = -T3.doorAngle;
+  // Clayettes coulissantes : façade en hêtre + tiges chromées
+  const bodyG = new THREE.CylinderGeometry(.036, .036, .2, 28), shG = new THREE.CylinderGeometry(.014, .036, .05, 28, 1, true), neckG = new THREE.CylinderGeometry(.0145, .0145, .07, 20),
+    capG = new THREE.CylinderGeometry(.0155, .0155, .055, 20), puntG = new THREE.CircleGeometry(.036, 28), hitG = new THREE.BoxGeometry(P * .95, G.H * .75, .14), ringG = new THREE.RingGeometry(.026, .034, 32),
+    rodG = new THREE.CylinderGeometry(.003, .003, Wi - .01, 8);
+  T3.pickables = []; T3.bottles = []; T3.rings = []; T3.levelY = [];
+  const glassM = {};
+  for (let r = 0; r < rk.rows; r++) {
+    const yb = plinth + .02 + ybs[r]; T3.levelY[r] = yb + .045 + (stk.has(r) ? UP / 2 : 0);
+    box(Wi - .01, .028, .016, 0, yb + .006, zf - .05, M.beech);
+    for (const sx of [-1, 1]) box(.012, .012, D - .1, sx * (Wi / 2 - .012), yb, -.02, M.chrome);
+    for (const z of [-.17, -.09, -.01, .07, .13]) { const rod = new THREE.Mesh(rodG, M.chrome); rod.rotation.z = Math.PI / 2; rod.position.set(0, yb, z); rod.receiveShadow = true; cab.add(rod); }
+    const slotsHere = [];
+    for (let c = 0; c < rk.cols; c++) slotsHere.push([c, 0, -Wi / 2 + (q ? .025 : .015) + P * (c + .5), yb + .003 + .036, q && c % 2 === 1]);
+    if (stk.has(r)) for (let c = 0; c < upCols(rk); c++) slotsHere.push([c, 1, -Wi / 2 + (q ? .025 : .015) + P * (c + 1), yb + .003 + .036 + UP, q && c % 2 === 0]);
+    for (const [c, l, x, y, rev] of slotsHere) {
+      const k = slotKey(rk.id, r, c, l), w = occ.get(k);
+      const zc = q ? (rev ? .07 : -.05) : -.02;
+      const label = posLabel(r, c, l) + (w ? " · " + w.name + (w.vintage ? " " + w.vintage : "") : " · place libre");
+      const frontZ = zc + .2;
+      if (w) {
+        const col = w.color || "autre";
+        const gm = glassM[col] || (glassM[col] = Object.assign(new THREE.MeshStandardMaterial({ color: GLASS[col] ?? GLASS.autre, roughness: .12, metalness: .25, transparent: col === "rose", opacity: col === "rose" ? .85 : 1 }), { userData: { own: true } }));
+        const hl = S.highlight ? (w.id === S.highlight) : false, dim = S.highlight && !hl;
+        const cm = new THREE.MeshStandardMaterial({ color: CAPS[col] ?? CAPS.autre, roughness: .35, metalness: .7, emissive: CAPS[col] ?? CAPS.autre, emissiveIntensity: hl ? .8 : 0 }); cm.userData.own = true;
+        const g = new THREE.Group(); g.position.set(x, y, zc); g.rotation.x = rev ? -Math.PI / 2 : Math.PI / 2;
+        const add = (geo, m, py) => { const o = new THREE.Mesh(geo, m); o.position.y = py; o.castShadow = true; o.userData = { k, label }; g.add(o); T3.pickables.push(o); return o; };
+        add(bodyG, gm, -.03); add(shG, gm, .095); add(neckG, gm, .155); const cap = add(capG, cm, .175);
+        const punt = new THREE.Mesh(puntG, gm); punt.rotation.x = Math.PI / 2; punt.position.y = -.13; punt.userData = { k, label }; g.add(punt); T3.pickables.push(punt);
+        g.userData = { k, cap, base: hl ? .8 : 0 };
+        if (dim) g.traverse(o => { if (o.material) { o.material = o.material.clone(); o.material.userData.own = true; o.material.transparent = true; o.material.opacity = .22; } });
+        if (dim) g.userData.cap = g.children[3];
+        cab.add(g); T3.bottles.push(g);
+      } else {
+        const h = new THREE.Mesh(hitG, M.hit); h.position.set(x, y, zf - .12); h.userData = { k, label }; cab.add(h); T3.pickables.push(h);
+        const ring = new THREE.Mesh(ringG, M.ring); ring.position.set(x, y, zf - .06); ring.userData = { k, always: !!S.move }; ring.visible = !!S.move; cab.add(ring); T3.rings.push(ring);
+      }
+      if (S.move && S.move.from === k) { const ring = new THREE.Mesh(ringG, M.ring); ring.position.set(x, y, frontZ + .01); ring.userData = { always: true }; cab.add(ring); T3.rings.push(ring); }
+    }
+  }
+  T3.hover = null;
+}
+function level3D(n, reset) {
+  const rk = rackById(T3.rackId); if (!rk) return;
+  n = Math.max(0, Math.min(rk.rows - 1, n)); S.level[rk.id] = n;
+  T3.ty = T3.levelY[n];
+  const span = Math.max(T3.dims.W * 1.1, G.H * 4), dist = Math.min(3, Math.max(.55, span / (2 * Math.tan(20 * Math.PI / 180)) * (T3.camera.aspect < 1 ? 1.15 / T3.camera.aspect : 1.05)));
+  if (reset) { T3.controls.target.set(0, T3.ty, 0); T3.camera.position.set(0.12 * dist, T3.ty + .1 * dist, dist + G.D / 2); }
+  T3.key.position.set(.5, T3.ty + 1.1, 1.6); T3.key.target.position.set(0, T3.ty, 0);
+  T3.lv.textContent = "Clayette " + rowName(n);
+  T3.wrap.querySelector('[data-l="-1"]').disabled = n === 0;
+  T3.wrap.querySelector('[data-l="1"]').disabled = n === rk.rows - 1;
+}
+function resize3D() {
+  if (!T3.renderer || !T3.wrap.isConnected) return;
+  const w = T3.wrap.clientWidth, h = T3.wrap.clientHeight; if (!w || !h) return;
+  T3.renderer.setSize(w, h, false); T3.camera.aspect = w / h; T3.camera.updateProjectionMatrix();
+}
+function loop3D() {
+  T3.raf = requestAnimationFrame(loop3D);
+  if (!T3.wrap.isConnected || S.view !== "cave" || S.mode !== "3d") return;
+  const c = T3.controls, dy = (T3.ty - c.target.y) * .1;
+  if (Math.abs(dy) > 1e-5) { c.target.y += dy; T3.camera.position.y += dy; }
+  T3.doorAngle += ((T3.doorOpen ? 1.75 : 0) - T3.doorAngle) * .1; if (T3.door) T3.door.rotation.y = -T3.doorAngle;
+  c.update(); T3.renderer.render(T3.scene, T3.camera);
+}
+
+function renderInventory() {
+  const f = $("#filters");
+  const has = new Set(S.wines.filter(w => count(w)).map(w => w.color || "autre"));
+  f.innerHTML = `<button class="chip" aria-pressed="${!S.filter}" data-f="">Tous</button>` +
+    COLORS.filter(([c]) => has.has(c)).map(([c, l]) => `<button class="chip" aria-pressed="${S.filter === c}" data-f="${c}"><span class="dot c-${c}"></span>${l}</button>`).join("") +
+    `<button class="chip" aria-pressed="${S.filter === "_drink"}" data-f="_drink">À boire maintenant</button>` +
+    `<button class="chip" aria-pressed="${S.filter === "_empty"}" data-f="_empty">Épuisés</button>` +
+    (S.bassin && S.mapMode !== "bues" ? `<button class="chip" aria-pressed="true" data-bx="1">${esc(bassinName(S.bassin, true))} ✕</button>` : "") +
+    (S.town && S.mapMode !== "bues" ? `<button class="chip" aria-pressed="true" data-bx="1">${esc(S.town.split("|")[0])} ✕</button>` : "");
+  f.querySelectorAll("button[data-f]").forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderInventory(); });
+  f.querySelectorAll("[data-bx]").forEach(x => x.onclick = () => { S.bassin = null; S.town = null; renderInventory(); });
+  renderMap();
+  const q = S.q.trim().toLowerCase();
+  let ws = S.wines.filter(w => {
+    if (S.filter === "_empty") { if (total(w) || wineCellar(w) !== curId()) return false; }
+    else if (!count(w)) return false;
+    if (S.filter === "_drink") { const d = drinkState(w); if (!d || d[0] === "wait") return false; }
+    else if (S.filter && S.filter[0] !== "_" && (w.color || "autre") !== S.filter) return false;
+    if (S.mapMode !== "bues" && S.bassin && bassinOf(w) !== S.bassin) return false;
+    if (S.mapMode !== "bues" && S.town && !(hasTown(w) && townKey(w) === S.town)) return false;
+    if (q && ![w.name, w.domain, w.appellation, w.region, w.grapes, w.vintage, w.notes].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const by = { name: (a, b) => (a.name || "").localeCompare(b.name || ""), vintage: (a, b) => (+a.vintage || 9999) - (+b.vintage || 9999),
+    drink: (a, b) => (+a.drinkUntil || 9999) - (+b.drinkUntil || 9999), count: (a, b) => count(b) - count(a) };
+  ws.sort(by[S.sort]);
+  const list = $("#list");
+  if (!S.ready) list.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "Chargement…"}</div>`;
+  else if (!ws.length) list.innerHTML = `<div class="empty">${S.wines.some(w => count(w)) ? "Aucun vin ne correspond." : "<strong>Cette cave est vide.</strong><span>Ajoutez votre premier vin, puis rangez-le dans un casier.</span>"}</div>`;
+  else list.innerHTML = ws.map(w => {
+    const d = drinkState(w);
+    const lz = wineCellar(w) === curId() ? +w.loose || 0 : 0;
+    const locs = slotsIn(w, curId()).sort().map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("") + (lz ? `<span class="loc">${lz} non rangée${lz > 1 ? "s" : ""}</span>` : "");
+    return `<button class="wine" data-w="${w.id}"><span class="yr">${esc(w.vintage || "NM")}${labelsOf(w).length ? `<img class="thumb" src="${blobUrl(labelsOf(w)[0])}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>
+      <span class="mid"><span class="name"><span class="dot c-${w.color || "autre"}"></span>${esc(w.name)}</span>
+      <span class="sub">${esc([w.domain, w.appellation, w.region].filter(Boolean).join(" · "))}</span>
+      ${d ? `<span class="pill ${d[0]}">${d[1]}</span>` : ""}</span>
+      <span class="count">${count(w)}</span>
+      ${locs ? `<span class="locs">${locs}</span>` : ""}</button>`;
+  }).join("");
+  list.querySelectorAll("[data-w]").forEach(b => b.onclick = () => openWine(b.dataset.w));
+  const drunk = S.drunk.filter(d => !d.cellarId || d.cellarId === curId());
+  $("#hist-clear").hidden = !S.drunkAll.length;
+  $("#hist").innerHTML = drunk.length ? drunk.slice(0, 10).map(d => `<div><time>${esc(new Date(d.at).toLocaleDateString("fr-FR"))}</time><span class="dot c-${d.color || "autre"}"></span><span>${esc(d.name)} ${esc(d.vintage || "")}</span></div>`).join("") : `<span class="muted">Rien pour l'instant. Quand vous sortez une bouteille avec « Bouteille bue », elle apparaît ici.</span>`;
+}
+
+/* ---------- Long-press drag to move a bottle (Étagères and Plan views) ---------- */
+const DR = { d: null };
+function dragCancel() { const d = DR.d; if (!d) return; clearTimeout(d.timer); if (d.ghost) d.ghost.remove(); d.cell.classList.remove("lifting"); if (d.over) d.over.classList.remove("drop"); document.body.classList.remove("dragging"); DR.d = null; }
+function dragTarget(x, y) { const el = document.elementFromPoint(x, y); const c = el && el.closest && el.closest("#racks .cell"); return c && c !== DR.d.cell ? c : null; }
+$("#racks").addEventListener("pointerdown", e => {
+  if (e.button > 0 || S.move) return;
+  const cell = e.target.closest(".cell"); if (!cell) return;
+  const w = occupancy().get(cell.dataset.k); if (!w) return;
+  dragCancel();
+  const d = DR.d = { k: cell.dataset.k, w, cell, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
+  d.timer = setTimeout(() => {
+    d.active = true; try { navigator.vibrate && navigator.vibrate(15); } catch (er) {}
+    const r = cell.getBoundingClientRect(), g = cell.cloneNode(false);
+    g.className = cell.className.replace(/\b(hl|dim|target)\b/g, "") + " ghost"; g.removeAttribute("data-k");
+    g.style.width = r.width + "px"; g.style.height = r.height + "px"; g.style.left = d.x + "px"; g.style.top = d.y + "px";
+    (cell.closest(".cab") || cell.closest(".rack") || document.body).append(g); d.ghost = g;
+    cell.classList.add("lifting"); document.body.classList.add("dragging");
+  }, 380);
+});
+window.addEventListener("pointermove", e => {
+  const d = DR.d; if (!d) return; d.x = e.clientX; d.y = e.clientY;
+  if (!d.active) { if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 8) dragCancel(); return; }
+  d.ghost.style.left = e.clientX + "px"; d.ghost.style.top = e.clientY + "px";
+  const t = dragTarget(e.clientX, e.clientY);
+  if (t !== d.over) { if (d.over) d.over.classList.remove("drop"); d.over = t; if (t) t.classList.add("drop"); }
+});
+window.addEventListener("pointerup", e => {
+  const d = DR.d; if (!d) return;
+  if (!d.active) { dragCancel(); return; }
+  const t = dragTarget(e.clientX, e.clientY); const from = d.k, w = d.w; dragCancel();
+  S.justDragged = true; setTimeout(() => { S.justDragged = false; }, 350);
+  if (!t) return;
+  const to = t.dataset.k, other = occupancy().get(to);
+  if (!other) { save(() => S.db.doc("wines/" + w.id).update({ slots: (w.slots || []).map(s => s === from ? to : s) }), "Bouteille déplacée en " + slotLabel(to)); return; }
+  if (other.id === w.id) { toast("Même vin aux deux places : rien à changer."); return; }
+  save(async () => {
+    await S.db.doc("wines/" + w.id).update({ slots: (w.slots || []).map(s => s === from ? to : s) });
+    await S.db.doc("wines/" + other.id).update({ slots: (other.slots || []).map(s => s === to ? from : s) });
+  }, "Bouteilles échangées : " + slotLabel(from) + " ⇄ " + slotLabel(to));
+});
+window.addEventListener("pointercancel", () => { if (DR.d && !DR.d.active) dragCancel(); });
+document.addEventListener("touchmove", e => { if (DR.d && DR.d.active) e.preventDefault(); }, { passive: false });
+$("#racks").addEventListener("contextmenu", e => { if (e.target.closest(".cell")) e.preventDefault(); });
+
+/* ---------- Sheets ---------- */
+function sheet(html, onMount) {
+  const root = $("#sheet-root");
+  root.innerHTML = `<div class="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const scrim = root.firstChild;
+  scrim.addEventListener("click", e => { if (e.target === scrim) close(); });
+  root.querySelectorAll("[data-close]").forEach(b => b.onclick = close);
+  onMount && onMount(root.querySelector(".sheet"));
+  const first = root.querySelector("input, select, button.primary"); first && first.focus();
+}
+function close() { $("#sheet-root").innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+
+function onCell(k) {
+  const w = occupancy().get(k);
+  if (S.move) {
+    if (w) { toast("Cette place est occupée, choisissez une place libre."); return; }
+    const mv = S.move, wine = S.wines.find(x => x.id === mv.wineId); S.move = null;
+    const slots = (wine.slots || []).filter(s => s !== mv.from).concat(k);
+    save(() => S.db.doc("wines/" + wine.id).update({ slots }), "Bouteille déplacée en " + slotLabel(k));
+    render(); return;
+  }
+  if (w) openSlot(k, w); else openPlace(k);
+}
+function confirmDrink(w, k) {
+  const box = document.querySelector(".sheet .actions"); if (!box) return;
+  box.outerHTML = `<div class="banner" id="drink-confirm" role="alertdialog" aria-label="Confirmer"><p>Confirmez-vous avoir bu <strong>${esc(w.name)} ${esc(w.vintage || "")}</strong>${k ? ` (${esc(slotLabel(k))})` : " (non rangée)"} ? Elle sera retirée de la cave et notée dans l'historique.</p>
+    <button class="primary" id="dc-yes">Oui, bouteille bue</button><button id="dc-no">Non, annuler</button></div>`;
+  $("#dc-yes").focus();
+  $("#dc-yes").onclick = async () => { close(); await drink(w, k); };
+  $("#dc-no").onclick = () => k ? openSlot(k, w) : openWine(w.id);
+}
+function openSlot(k, w) {
+  sheet(`<header><span class="dot c-${w.color || "autre"}" style="width:18px;height:18px;margin-top:4px"></span><div>
+      <div class="label">${esc(slotLabel(k))}</div><h2>${esc(w.name)} ${esc(w.vintage || "")}</h2>
+      <div class="muted">${esc([w.domain, w.appellation, w.region].filter(Boolean).join(" · "))}</div></div>
+      <button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    ${labelPic(w)}
+    ${facts(w)}
+    <div class="actions">
+      <button class="primary" id="a-drink">Bouteille bue</button>
+      <button id="a-move">Déplacer</button>
+      <button id="a-out">Sortir du casier</button>
+      <button id="a-edit">Fiche du vin</button>
+    </div>`, () => {
+    $("#a-drink").onclick = () => confirmDrink(w, k);
+    $("#a-move").onclick = () => { close(); S.move = { wineId: w.id, from: k }; S.highlight = null; S.view = "cave"; render(); };
+    $("#a-out").onclick = () => { close(); save(() => S.db.doc("wines/" + w.id).update({ slots: (w.slots || []).filter(s => s !== k), loose: (+w.loose || 0) + 1 }), "Bouteille sortie du casier (gardée en non rangée)"); };
+    $("#a-edit").onclick = () => openWine(w.id);
+    wireLabelPic();
+  });
+}
+function facts(w) {
+  const rows = [["Couleur", colorLabel(w.color)], ["Ville", w.town ? townLabel(w) : ""], ["Bassin", bassinName(bassinOf(w))], ["Cépages", w.grapes], ["Garde", [w.drinkFrom, w.drinkUntil].filter(Boolean).join(" → ")],
+    ["Prix", w.price ? w.price + " €" : ""], ["Bouteilles", count(w) === total(w) ? count(w) : count(w) + " ici, " + total(w) + " au total"], ["Notes", w.notes]].filter(r => r[1] !== "" && r[1] != null);
+  return `<dl class="facts">${rows.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>`;
+}
+async function drink(w, k) {
+  const ref = S.db && S.db.doc("wines/" + w.id);
+  const patch = k ? { slots: (w.slots || []).filter(s => s !== k) } : { loose: Math.max(0, (+w.loose || 0) - 1) };
+  const ok = await save(() => ref.update(patch), "Santé ! Bouteille retirée de la cave");
+  if (ok) S.db.collection("drunk").add({ cellarId: k ? slotCellar(k) : wineCellar(w), wineId: w.id, name: w.name, vintage: w.vintage || "", color: w.color || "autre", domain: w.domain || "", bassin: bassinOf(w) || "", ...(hasTown(w) ? { town: w.town, townDep: w.townDep || "", lat: w.lat, lon: w.lon } : {}), at: new Date().toISOString(), from: k ? slotLabel(k) : "non rangée" }).catch(() => {});
+}
+function openPlace(k) {
+  const here = w => wineCellar(w) === curId();
+  const lz = w => here(w) ? +w.loose || 0 : 0;
+  const wines = [...S.wines].sort((a, b) => lz(b) - lz(a) || (count(b) > 0) - (count(a) > 0) || (a.name || "").localeCompare(b.name || ""));
+  sheet(`<header><div><div class="label">Place libre</div><h2>Ranger une bouteille en ${esc(slotLabel(k))}</h2></div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    <button class="primary" id="p-new">+ Nouveau vin à cette place</button>
+    ${wines.length ? `<input id="p-q" type="search" placeholder="Ou choisir un vin déjà connu…">
+    <div class="pick" id="p-list"></div>
+    <p class="muted" style="margin:0;font-size:.85rem">Si le vin a des bouteilles non rangées, l'une d'elles est rangée ici. Sinon une bouteille est ajoutée au stock.</p>` : ""}`, () => {
+    $("#p-new").onclick = () => openWineForm(null, k);
+    const draw = () => {
+      const q = ($("#p-q")?.value || "").toLowerCase();
+      $("#p-list").innerHTML = wines.filter(w => !q || [w.name, w.domain, w.vintage, w.appellation].join(" ").toLowerCase().includes(q)).map(w =>
+        `<button data-w="${w.id}"><span class="dot c-${w.color || "autre"}"></span><span class="grow">${esc(w.name)} ${esc(w.vintage || "")}<br><span class="muted" style="font-size:.8rem">${esc(w.domain || "")}</span></span>${lz(w) ? `<span class="loc">${lz(w)} à ranger</span>` : `<span class="loc">${count(w)} btl ici</span>`}</button>`).join("");
+      $("#p-list").querySelectorAll("[data-w]").forEach(b => b.onclick = () => {
+        const w = S.wines.find(x => x.id === b.dataset.w); close();
+        const patch = { slots: (w.slots || []).concat(k) }; if (lz(w)) patch.loose = +w.loose - 1;
+        save(() => S.db.doc("wines/" + w.id).update(patch), (lz(w) ? "Bouteille rangée en " : "Bouteille ajoutée en ") + slotLabel(k));
+      });
+    };
+    if (wines.length) { draw(); $("#p-q").oninput = draw; }
+  });
+}
+function openWine(id) {
+  const w = S.wines.find(x => x.id === id); if (!w) return;
+  sheet(`<header><span class="dot c-${w.color || "autre"}" style="width:18px;height:18px;margin-top:4px"></span><div>
+      <h2>${esc(w.name)} ${esc(w.vintage || "")}</h2><div class="muted">${esc([w.domain, w.appellation, w.region].filter(Boolean).join(" · "))}</div></div>
+      <button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    ${labelPic(w)}
+    ${facts(w)}
+    ${(w.slots || []).length ? `<div class="chips">${[...w.slots].sort((a, b) => (slotCellar(a) !== curId()) - (slotCellar(b) !== curId()) || a.localeCompare(b)).map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("")}</div>` : ""}
+    <div class="actions">
+      ${slotsIn(w, curId()).length ? `<button class="primary" id="w-show">Voir dans la cave</button>` : ""}
+      ${+w.loose ? `<button id="w-drink">Bouteille bue (non rangée)</button>` : ""}
+      ${labelsOf(w).length < 2 && S.assets ? `<button id="w-photo">${labelsOf(w).length ? "Ajouter la contre-étiquette" : "Ajouter des photos"}</button>` : ""}
+      <button id="w-edit">Modifier</button>
+    </div>`, () => {
+    wireLabelPic();
+    $("#w-photo") && ($("#w-photo").onclick = () => openWineForm(w, null, true));
+    $("#w-show") && ($("#w-show").onclick = () => { close(); S.highlight = w.id; S.move = null; S.view = "cave"; render(); window.scrollTo({ top: 0 }); });
+    $("#w-drink") && ($("#w-drink").onclick = () => confirmDrink(w, null));
+    $("#w-edit").onclick = () => openWineForm(w);
+  });
+}
+/* Photos: wine field `labels` = up to two asset ids [étiquette, contre-étiquette]. */
+const PHOTO_SLOTS = ["Étiquette", "Contre-étiquette"];
+const blobUrl = id => "/_blob/" + encodeURIComponent(id);
+const labelsOf = w => (Array.isArray(w.labels) ? w.labels : w.label ? [w.label] : []).filter(Boolean);
+function labelPic(w) { const ls = labelsOf(w); return ls.length ? `<div class="labelpics n${ls.length}">${ls.map((id, i) => `<img class="labelpic" src="${blobUrl(id)}" alt="${PHOTO_SLOTS[i] || "Photo"} de ${esc(w.name)}" onerror="this.remove()">`).join("")}</div>` : ""; }
+function wireLabelPic() { document.querySelectorAll(".sheet .labelpic").forEach(i => i.onclick = () => { const big = !i.classList.contains("big"); document.querySelectorAll(".sheet .labelpic").forEach(x => x.classList.remove("big")); i.classList.toggle("big", big); i.parentNode.classList.toggle("zoom", big); }); }
+/* Shrink a photo before upload: phone photos are often 4-8 MB, a label reads fine at 1400 px. */
+async function shrinkPhoto(file, max = 1400) {
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch (e) { src = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => ko(new Error("image illisible")); im.src = URL.createObjectURL(file); }); }
+  const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight, k = Math.min(1, max / Math.max(w0, h0));
+  const c = document.createElement("canvas"); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+  return await new Promise((ok, ko) => c.toBlob(b => b ? ok(b) : ko(new Error("conversion impossible")), "image/jpeg", 0.85));
+}
+const UPLOAD_ERR = { too_large: "La photo est trop lourde.", unsupported_type: "Ce format d'image n'est pas accepté.", quota_or_state: "L'espace photo de la cave est plein.",
+  rate_limited: "Trop d'envois d'un coup, réessayez dans un instant.", not_granted: "Vous n'avez pas le droit d'ajouter des photos ici.", capability_disabled: "Les photos sont désactivées sur cette page." };
+async function uploadLabel(blob) {
+  try { return (await S.assets.upload(blob, { type: "image/jpeg" })).id; }
+  catch (e) {
+    if (e && e.code === "store_unavailable") { try { return (await S.assets.upload(blob, { type: "image/jpeg" })).id; } catch (e2) { e = e2; } }
+    throw new Error(UPLOAD_ERR[e && e.code] || "Envoi de la photo impossible.");
+  }
+}
+function openWineForm(w, placeAt, focusPhoto) {
+  const v = w || { color: "rouge", loose: 0 };
+  const f = (id, label, type = "text", extra = "") => `<label for="${id}">${label}<input id="${id}" type="${type}" value="${esc(v[id.slice(2)] ?? "")}" ${extra}></label>`;
+  sheet(`<header><div><h2>${w ? "Modifier le vin" : "Nouveau vin"}</h2>${placeAt ? `<div class="muted">Sera rangé en ${esc(slotLabel(placeAt))}</div>` : ""}</div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    <form class="form" id="wf">
+      <label class="full" for="f-name">Nom du vin / cuvée *<input id="f-name" required value="${esc(v.name || "")}" placeholder="ex. Château Lagrange"></label>
+      ${f("f-domain", "Domaine / producteur")}
+      <label for="f-town" class="townfld"><span>Ville du producteur <span class="muted" id="f-town-hint" style="font-weight:400"></span></span><input id="f-town" autocomplete="off" value="${esc(v.town ? townLabel(v) : "")}" placeholder="ex. Pauillac" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-town-list"><div class="sugg" id="f-town-list" role="listbox" hidden></div></label>
+      ${f("f-vintage", "Millésime", "number", 'min="1900" max="2100" inputmode="numeric"')}
+      ${f("f-appellation", "Appellation", "text", 'placeholder="ex. Saint-Julien"')}
+      ${f("f-region", "Région", "text", 'placeholder="ex. Bordeaux"')}
+      <label class="full" for="f-bassin">Bassin viticole <span class="muted" id="f-bassin-hint" style="font-weight:400"></span><select id="f-bassin"><option value="">Non précisé</option>${BASSINS.map(([id, , l]) => `<option value="${esc(id)}">${esc(l)}</option>`).join("")}</select></label>
+      <label for="f-color">Couleur<select id="f-color">${COLORS.map(([c, l]) => `<option value="${c}" ${v.color === c ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      ${f("f-grapes", "Cépages")}
+      ${f("f-drinkFrom", "À boire à partir de", "number", 'min="1900" max="2150" inputmode="numeric"')}
+      ${f("f-drinkUntil", "À boire avant", "number", 'min="1900" max="2150" inputmode="numeric"')}
+      ${f("f-price", "Prix par bouteille (€)", "number", 'min="0" step="0.01" inputmode="decimal"')}
+      <label for="f-loose">Bouteilles non rangées<input id="f-loose" type="number" min="0" inputmode="numeric" value="${+v.loose || 0}"></label>
+      <label class="full" for="f-notes">Notes<textarea id="f-notes" rows="2">${esc(v.notes || "")}</textarea></label>
+      ${S.assets ? `<div class="full"><span class="label" style="display:block;margin-bottom:6px">Photos (2 au maximum)</span><div class="photos">${PHOTO_SLOTS.map((t, i) => `<div class="photo-field">
+        <div class="prev" id="f-prev${i}">${labelsOf(v)[i] ? `<img src="${blobUrl(labelsOf(v)[i])}" alt="">` : esc(t)}</div>
+        <div class="btns"><strong style="font-size:.85rem">${t}</strong><label class="btn" for="f-photo${i}" role="button" tabindex="0" id="f-pbtn${i}">${labelsOf(v)[i] ? "Changer" : "Prendre / choisir"}</label>
+          <input id="f-photo${i}" type="file" accept="image/*">
+          <button type="button" id="f-pdel${i}" ${labelsOf(v)[i] ? "" : "hidden"}>Retirer</button></div></div>`).join("")}</div></div>` : ""}
+      <p class="full muted" style="margin:0;font-size:.85rem">Les bouteilles rangées se placent depuis l'onglet Cave, en touchant une place libre.${w ? ` Ce vin a ${(w.slots || []).length} bouteille(s) rangée(s).` : ""}</p>
+      <div class="actions full">
+        <button class="primary" type="submit">${w ? "Enregistrer" : "Ajouter le vin"}</button>
+        <button type="button" data-close>Annuler</button>
+        ${w ? `<button type="button" class="danger" id="f-del" style="margin-left:auto">Supprimer ce vin</button>` : ""}
+      </div>
+      <div class="full" id="f-confirm"></div>
+    </form>`, () => {
+    const bsel = $("#f-bassin"), hint = $("#f-bassin-hint");
+    let town = hasTown(v) ? { town: v.town, townDep: v.townDep || "", lat: v.lat, lon: v.lon } : null;
+    const autoB = () => { if (bsel.dataset.touched) return; let id = guessBassin($("#f-appellation").value, $("#f-region").value, $("#f-name").value, $("#f-domain").value), why = "l'appellation ou la région";
+      if (!id && town) { id = bassinAt(+town.lon, +town.lat); why = "la ville du producteur"; }
+      bsel.value = id; hint.textContent = id ? "· proposé d'après " + why : ""; };
+    { const ti = $("#f-town"), tl = $("#f-town-list"), th = $("#f-town-hint"); let opts = [], act = -1;
+      const showHint = () => { th.textContent = town ? "· placé sur la carte" : ti.value.trim() ? "· choisissez dans la liste" : ""; };
+      const pick = c => { town = { town: c.n, townDep: c.d, lat: c.lat, lon: c.lon }; ti.value = townLabel(town); tl.hidden = true; ti.setAttribute("aria-expanded", "false"); showHint(); autoB(); };
+      const draw = () => { opts = findCommunes(ti.value); act = -1;
+        tl.innerHTML = opts.map((c, i) => `<button type="button" role="option" data-i="${i}">${esc(c.n)} <span class="muted">(${esc(c.d)})</span></button>`).join("");
+        tl.hidden = !opts.length; ti.setAttribute("aria-expanded", String(!!opts.length));
+        tl.querySelectorAll("[data-i]").forEach(b => b.onmousedown = e => { e.preventDefault(); pick(opts[+b.dataset.i]); }); };
+      ti.addEventListener("focus", () => loadCommunes().then(() => { if (document.activeElement === ti && !town) draw(); }).catch(() => { th.textContent = "· liste des communes indisponible"; }), { once: true });
+      ti.oninput = () => { town = null; showHint(); if (COMMUNES_L) draw(); else loadCommunes().then(draw).catch(() => {}); };
+      ti.onkeydown = e => { if (tl.hidden) return; const bs = tl.querySelectorAll("button");
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); act = (act + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length; bs.forEach((b, i) => b.classList.toggle("act", i === act)); }
+        else if (e.key === "Enter" && opts.length) { e.preventDefault(); pick(opts[Math.max(0, act)]); } else if (e.key === "Escape") { e.stopPropagation(); tl.hidden = true; } };
+      ti.onblur = () => setTimeout(() => { tl.hidden = true; ti.setAttribute("aria-expanded", "false");
+        if (!town && ti.value.trim() && COMMUNES_L) { const m = findCommunes(ti.value, 2); if (m.length && norm(m[0].n).trim() === norm(ti.value.replace(/\(.*$/, "")).trim()) pick(m[0]); } }, 120);
+      showHint(); }
+    if (v.bassin) { bsel.value = v.bassin; bsel.dataset.touched = "1"; } else autoB();
+    bsel.onchange = () => { bsel.dataset.touched = "1"; hint.textContent = ""; };
+    ["appellation", "region", "name", "domain"].forEach(id => $("#f-" + id).addEventListener("input", autoB));
+    // Each slot holds an existing asset id (string), a new picture (Blob) or nothing (null).
+    const photos = [0, 1].map(i => labelsOf(v)[i] || null); let photosTouched = false;
+    if ($("#f-photo0")) [0, 1].forEach(i => {
+      const fp = $("#f-photo" + i), prev = $("#f-prev" + i), btn = $("#f-pbtn" + i), del = $("#f-pdel" + i);
+      btn.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fp.click(); } };
+      fp.onchange = async () => {
+        const file = fp.files && fp.files[0]; if (!file) return;
+        prev.textContent = "Préparation…";
+        try { photos[i] = await shrinkPhoto(file); photosTouched = true; prev.innerHTML = `<img src="${URL.createObjectURL(photos[i])}" alt="">`; del.hidden = false; btn.textContent = "Changer"; }
+        catch (e) { prev.textContent = "Image illisible"; toast("Cette image ne peut pas être lue, essayez une autre photo."); }
+      };
+      del.onclick = () => { photos[i] = null; photosTouched = true; prev.textContent = PHOTO_SLOTS[i]; del.hidden = true; btn.textContent = "Prendre / choisir"; fp.value = ""; };
+    });
+    if (focusPhoto && $("#f-photo0")) setTimeout(() => { const i = labelsOf(v).length ? 1 : 0; $("#f-pbtn" + i).scrollIntoView({ block: "center" }); $("#f-photo" + i).click(); }, 50);
+    $("#wf").onsubmit = async e => {
+      e.preventDefault();
+      const g = id => $("#f-" + id).value.trim();
+      const data = { name: g("name"), domain: g("domain"), vintage: g("vintage"), appellation: g("appellation"), region: g("region"), bassin: g("bassin"), color: g("color"),
+        grapes: g("grapes"), drinkFrom: g("drinkFrom"), drinkUntil: g("drinkUntil"), price: g("price"), loose: Math.max(0, parseInt(g("loose")) || 0), notes: g("notes"),
+        town: town ? town.town : "", townDep: town ? town.townDep : "", lat: town ? town.lat : "", lon: town ? town.lon : "" };
+      if (!data.name) return;
+      const sub = $("#wf button[type=submit]");
+      if (photosTouched) {
+        sub.disabled = true; sub.textContent = "Envoi des photos…";
+        try { for (let i = 0; i < 2; i++) if (photos[i] instanceof Blob) photos[i] = await uploadLabel(photos[i]); }
+        catch (er) { sub.disabled = false; sub.textContent = w ? "Enregistrer" : "Ajouter le vin"; toast(er.message + " La fiche n'est pas encore enregistrée."); return; }
+        data.labels = photos.filter(x => typeof x === "string"); data.label = data.labels[0] || "";
+      }
+      close();
+      if (w) await save(() => S.db.doc("wines/" + w.id).update(data), "Fiche enregistrée");
+      else { data.slots = placeAt ? [placeAt] : []; data.cellarId = curId() || null; data.createdAt = new Date().toISOString();
+        await save(() => S.db.collection("wines").add(data), placeAt ? "Vin ajouté et rangé en " + slotLabel(placeAt) : "Vin ajouté"); }
+    };
+    $("#f-del") && ($("#f-del").onclick = () => {
+      $("#f-confirm").innerHTML = `<div class="banner"><p>Supprimer « ${esc(w.name)} » et ses ${count(w)} bouteille(s) de l'inventaire ? Les places occupées seront libérées.</p><button class="danger" id="f-del-ok" type="button">Supprimer</button></div>`;
+      $("#f-del-ok").onclick = () => { close(); save(() => S.db.doc("wines/" + w.id).delete(), "Vin supprimé"); };
+    });
+  });
+}
+function openRackForm(rk, cellarId) {
+  const occ = occupancy(), cid = rk ? rackCellar(rk) : (cellarId || curId()), cname = S.cellars.find(c => c.id === cid)?.name || "";
+  sheet(`<header><div><h2>${rk ? "Modifier le casier" : "Nouveau casier"}${cname ? ` · ${esc(cname)}` : ""}</h2><div class="muted">Les rangées sont nommées A, B, C… de haut en bas, les colonnes 1, 2, 3… de gauche à droite.</div></div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
+    <form class="form" id="rf">
+      <label class="full" for="r-name">Nom<input id="r-name" required value="${esc(rk?.name || "")}" placeholder="ex. Casier du fond, Cave électrique…"></label>
+      <label for="r-rows">Nombre d'étagères<input id="r-rows" type="number" min="1" max="40" required value="${rk?.rows || 6}"></label>
+      <label for="r-cols">Bouteilles par rangée<input id="r-cols" type="number" min="1" max="40" required value="${rk?.cols || 8}"></label>
+      <label class="full" for="r-layout">Rangement sur l'étagère<select id="r-layout">
+        <option value="standard" ${rk?.layout !== "quinconce" ? "selected" : ""}>Côte à côte (tous les goulots vers l'avant)</option>
+        <option value="quinconce" ${rk?.layout === "quinconce" ? "selected" : ""}>En quinconce (tête-bêche, une bouteille sur deux inversée)</option>
+      </select></label>
+      <fieldset class="full stkset"><legend>Deuxième rangée posée sur la première</legend>
+        <p class="muted" style="margin:0 0 8px;font-size:.85rem">Cochez les étagères où vous couchez une 2e rangée de bouteilles par-dessus. Elle compte une bouteille de moins que la rangée du dessous.</p>
+        <div class="stkbox" id="r-stk"></div>
+        <div class="actions" style="margin-top:8px"><button type="button" id="stk-all">Toutes</button><button type="button" id="stk-none">Aucune</button></div>
+      </fieldset>
+      <div class="actions full"><button class="primary" type="submit">${rk ? "Enregistrer" : "Créer le casier"}</button><button type="button" data-close>Annuler</button>
+      ${rk ? `<button type="button" class="danger" id="r-del" style="margin-left:auto">Supprimer</button>` : ""}</div>
+      <div class="full" id="r-msg"></div>
+    </form>`, () => {
+    const chosen = new Set(rk ? [...stackedRows(rk)] : []);
+    const drawStk = () => { const n = Math.min(40, Math.max(1, parseInt($("#r-rows").value) || 1));
+      $("#r-stk").innerHTML = Array.from({ length: n }, (_, r) => `<label class="stkopt"><input type="checkbox" data-sr="${r}" ${chosen.has(r) ? "checked" : ""}> ${rowName(r)}</label>`).join("");
+      $("#r-stk").querySelectorAll("input").forEach(i => i.onchange = () => { i.checked ? chosen.add(+i.dataset.sr) : chosen.delete(+i.dataset.sr); }); };
+    drawStk(); $("#r-rows").oninput = drawStk;
+    $("#stk-all").onclick = () => { const n = parseInt($("#r-rows").value) || 1; for (let r = 0; r < n; r++) chosen.add(r); drawStk(); };
+    $("#stk-none").onclick = () => { chosen.clear(); drawStk(); };
+    $("#rf").onsubmit = e => {
+      e.preventDefault();
+      const data = { name: $("#r-name").value.trim(), rows: Math.min(40, Math.max(1, parseInt($("#r-rows").value) || 1)), cols: Math.min(40, Math.max(1, parseInt($("#r-cols").value) || 1)), layout: $("#r-layout").value };
+      data.stacked = [...chosen].filter(r => r < data.rows).sort((a, b) => a - b);
+      if (rk) {
+        const st = new Set(data.stacked), uc = Math.max(1, data.cols - 1);
+        const lost = [...occ.keys()].filter(k => { const [id, r, c, l] = k.split("|"); return id === rk.id && (+r >= data.rows || (+l ? (!st.has(+r) || +c >= uc) : +c >= data.cols)); });
+        if (lost.length) { $("#r-msg").innerHTML = `<div class="banner"><p>${lost.length} bouteille(s) sont rangées hors de ces nouvelles dimensions. Déplacez-les d'abord.</p></div>`; return; }
+        close(); save(() => S.db.doc("racks/" + rk.id).update(data), "Casier modifié");
+      } else { if (!cid) { $("#r-msg").innerHTML = `<div class="banner"><p>Créez d'abord une cave dans les réglages.</p></div>`; return; }
+        data.order = racksOf(cid).length; data.cellarId = cid; close(); save(() => S.db.collection("racks").add(data), "Casier créé"); }
+    };
+    $("#r-del") && ($("#r-del").onclick = () => {
+      const used = [...occ.keys()].filter(k => k.startsWith(rk.id + "|")).length;
+      if (used) { $("#r-msg").innerHTML = `<div class="banner"><p>Ce casier contient encore ${used} bouteille(s). Videz-le avant de le supprimer.</p></div>`; return; }
+      $("#r-msg").innerHTML = `<div class="banner"><p>Supprimer le casier « ${esc(rk.name)} » ?</p><button class="danger" type="button" id="r-del-ok">Supprimer</button></div>`;
+      $("#r-del-ok").onclick = () => { close(); save(() => S.db.doc("racks/" + rk.id).delete(), "Casier supprimé"); };
+    });
+  });
+}
+
+/* ---------- Wiring ---------- */
+$("#nav-add").onclick = () => openWineForm(null);
+document.querySelectorAll("nav.tabs button[data-view]").forEach(b => b.onclick = () => { S.view = b.dataset.view; try { localStorage.setItem("cave.view", S.view); } catch (e) {} render(); });
+$("#btn-add-rack").onclick = () => { S.view = "reglages"; render(); window.scrollTo({ top: 0 }); };
+$("#btn-add-wine").onclick = () => openWineForm(null);
+$("#btn-add-cellar").onclick = () => openCellarForm();
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { S.mode = b.dataset.mode; try { localStorage.setItem("cave.mode", S.mode); } catch (e) {} renderRacks(); });
+try { const m = localStorage.getItem("cave.mode"); if (["plan", "etageres", "3d"].includes(m)) S.mode = m; } catch (e) {}
+$("#hist-clear").onclick = () => {
+  const n = S.drunkAll.length; if (!n) return;
+  $("#hist-confirm").innerHTML = `<div class="banner" role="alertdialog" aria-label="Confirmer"><p>Effacer l'historique complet : <strong>${n} bouteille(s) bue(s)</strong>, toutes caves confondues ? Elles disparaîtront aussi de la carte « Bues depuis le début ». Les vins encore en cave ne sont pas touchés. Cette action est définitive.</p>
+    <button class="danger" id="hc-yes">Oui, tout effacer</button> <button id="hc-no">Non, garder</button></div>`;
+  $("#hc-no").onclick = () => { $("#hist-confirm").innerHTML = ""; };
+  $("#hc-yes").onclick = async () => {
+    $("#hist-confirm").innerHTML = `<p class="muted">Effacement en cours…</p>`;
+    const ids = S.drunkAll.map(d => d.id); let fail = 0;
+    for (let i = 0; i < ids.length; i += 10) {
+      const res = await Promise.allSettled(ids.slice(i, i + 10).map(id => S.db.doc("drunk/" + id).delete()));
+      fail += res.filter(r => r.status === "rejected").length;
+    }
+    $("#hist-confirm").innerHTML = "";
+    toast(fail ? `${ids.length - fail} effacée(s), ${fail} n'ont pas pu l'être. Réessayez.` : "Historique effacé");
+  };
+};
+$("#q").oninput = e => { S.q = e.target.value; renderInventory(); };
+$("#sort").onchange = e => { S.sort = e.target.value; renderInventory(); };
+try { if (localStorage.getItem("cave.map") === "bues") S.mapMode = "bues"; } catch (e) {}
+try { const v = localStorage.getItem("cave.view"); if (["cave", "inventaire", "reglages"].includes(v)) S.view = v; } catch (e) {}
+render();
+
+(async () => {
+  const timer = setTimeout(() => { if (!S.ready) { S.err = "La cave ne répond pas. Vérifiez la connexion puis rouvrez la page."; $("#sync").textContent = "hors ligne"; render(); } }, 10000);
+  const db = window.claude ? await window.claude.use("db") : null;
+  if (!db) { clearTimeout(timer); S.err = "Connectez-vous à claude.ai pour voir et enregistrer votre cave."; $("#sync").textContent = "non connecté"; render(); return; }
+  S.db = db;
+  try { S.assets = await window.claude.use("assets"); } catch (e) { S.assets = null; }
+  let got = { racks: false, wines: false, cellars: false };
+  const done = k => { got[k] = true; if (got.racks && got.wines && got.cellars) { clearTimeout(timer); S.ready = true; S.err = ""; $("#sync").textContent = "à jour"; } render(); };
+  const fail = e => { clearTimeout(timer); S.err = "Lecture impossible : " + (e && e.message || "erreur inconnue"); $("#sync").textContent = "erreur"; render(); };
+  db.collection("cellars").onSnapshot(s => { S.cellars = s.docs.map(d => ({ id: d.id, ...d.data() })); done("cellars"); }, fail);
+  db.doc("settings/display").onSnapshot(s => { const id = s.exists ? s.data()?.cellarId : null; if (id && id !== S.cellarId) { S.cellarId = id; S.highlight = null; S.move = null; render(); } }, () => {});
+  db.collection("racks").onSnapshot(s => { S.racks = s.docs.map(d => ({ id: d.id, ...d.data() })); done("racks"); }, fail);
+  db.collection("wines").onSnapshot(s => { S.wines = s.docs.map(d => ({ id: d.id, ...d.data() })); done("wines"); }, fail);
+  db.collection("drunk").orderBy("at", "desc").onSnapshot(s => { S.drunkAll = s.docs.map(d => ({ id: d.id, ...d.data() })); S.drunk = S.drunkAll.slice(0, 30); renderInventory(); }, () => {});
+})();
+</script>
