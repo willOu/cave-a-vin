@@ -2,7 +2,10 @@
 
 Application web pour gérer sa cave : quelles bouteilles on a, et où elles sont rangées.
 
-Elle tourne aujourd'hui comme un Artifact claude.ai : https://claude.ai/artifact/5voMMV4i7cNYPizfvQuC7V
+Elle existe en deux versions issues du même fichier :
+
+- l'application installable (PWA) : https://willou.github.io/cave-a-vin/
+- l'Artifact claude.ai : https://claude.ai/artifact/5voMMV4i7cNYPizfvQuC7V
 
 ## Fonctionnalités
 
@@ -19,14 +22,28 @@ Elle tourne aujourd'hui comme un Artifact claude.ai : https://claude.ai/artifact
 - **Responsive** : mise en page téléphone, et mise en page ordinateur à partir de 1000 px de large.
 - Thème « Grand Cru » (aubergine et or, Bodoni Moda + Manrope).
 
+## Application installable (PWA)
+
+Le site https://willou.github.io/cave-a-vin/ est l'application installable sur téléphone et ordinateur (GitHub Pages, branche `main`, dossier racine).
+
+- **Installer** : sur iPhone, Partager puis « Sur l'écran d'accueil ». Sur Android, menu ⋮ puis « Installer l'application ». Sur ordinateur, l'icône d'installation de Chrome ou Edge.
+- **Données** : stockées sur l'appareil (IndexedDB), photos comprises. L'application fonctionne hors connexion.
+- **Sauvegarde** : Réglages, puis Exporter ou Importer. Un même fichier JSON passe entre l'Artifact claude.ai et l'application installée, ou d'un appareil à l'autre.
+- **Claude** : « Que boire ce soir ? » et le scan d'étiquette appellent l'API Anthropic (`claude-opus-5-5`) avec la clé API de l'utilisateur. Cette clé se saisit dans Réglages et reste dans le `localStorage` de l'appareil. Sans clé, ces deux fonctions sont masquées.
+
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | Toute l'application : HTML, CSS et JS, avec la carte (`GEO`) intégrée. |
+| `src/app.html` | La source de l'application, publiée telle quelle comme Artifact claude.ai. |
+| `index.html` | L'application installable, générée depuis `src/app.html` par `tools/build_pwa.py`. |
+| `sw.js` | Service worker (hors connexion, mises à jour), généré depuis `tools/sw.template.js`. |
+| `manifest.webmanifest`, `icons/` | Nom, couleurs et icônes de l'application installée. |
 | `communes.js` | Les 35 000 communes de France (`nom\|département\|longitude\|latitude`), triées par population. Chargé à la demande pour la recherche de la ville du producteur. |
 | `data/bassins-viticoles-france.geojson` | Les bassins viticoles, source de la carte. |
 | `tools/build_geo.py` | Régénère `GEO` et `communes.js` à partir des GeoJSON (voir l'en-tête du script). |
+
+Après une modification de `src/app.html`, lancez `python3 tools/build_pwa.py`, puis committez `index.html` et `sw.js`.
 
 ## Stockage des données
 
@@ -37,7 +54,7 @@ L'application utilise les capacités d'exécution des Artifacts claude.ai, appel
 - `user` : l'utilisateur connecté.
 - `sample` (avec images) : demandes à Claude pour les accords mets-vins et la lecture d'étiquette. Elles sont faites sur le compte claude.ai de la personne qui utilise l'appli.
 
-Ouverte en dehors de claude.ai (en local ou sur GitHub Pages), la page s'affiche mais ne peut ni lire ni enregistrer de données. Pour l'héberger ailleurs, il faut remplacer ces appels par une autre base de données, par exemple Supabase ou Firebase.
+Hors de claude.ai, `window.claude` n'existe pas : la page bascule alors sur un équivalent local (`Local.db`, `Local.assets`, et `localSample()` pour Claude) avec la même interface. Pour synchroniser plusieurs appareils, il suffirait de remplacer `Local.db` par une base en ligne (Supabase par exemple) qui offre les mêmes méthodes.
 
 ## Sources des données géographiques
 

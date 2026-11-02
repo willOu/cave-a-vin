@@ -1,3 +1,18 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#120c13">
+<meta name="description" content="Gestion de cave à vin : bouteilles, emplacements, carte des vins, dégustations.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ma Cave">
+<style>html,body{margin:0}*,*::before,*::after{box-sizing:border-box}</style>
 <title>Ma Cave à Vin</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -392,6 +407,8 @@ nav.tabs .plus { width: 42px; height: 42px; padding: 0; border-radius: 50%; back
 .scanbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .scanbtn { display: inline-flex; gap: 6px; align-items: center; color: var(--fg); }
 .scanmsg { flex: 1 1 100%; font-size: .85rem; color: var(--muted); } .scanmsg:empty { display: none; }
+.actions .btn { display: inline-flex; align-items: center; color: var(--fg); }
+@media (display-mode: standalone) { header.top { padding-top: env(safe-area-inset-top, 0px); } }
 .vh { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 input.filled, select.filled { border-color: var(--gold); }
 #view-bilan .bilan { display: grid; gap: 16px; }
@@ -445,6 +462,9 @@ input.filled, select.filled { border-color: var(--gold); }
 }
 @media (min-width: 1000px) and (hover: hover) { .wine { transition: background .15s; } }
 </style>
+</head>
+<body>
+
 
 <header class="top"><div class="wrap">
   <h1><span class="eyebrow">Ma cave</span> · <span id="cellar-name">Ma Cave</span> <small id="sync">connexion…</small></h1>
@@ -509,6 +529,17 @@ input.filled, select.filled { border-color: var(--gold); }
       <button class="primary" id="btn-add-cellar">+ Nouvelle cave</button>
     </div>
     <div class="list" id="cellars" role="radiogroup" aria-label="Cave affichée"></div>
+    <section class="card" id="backup"><h2>Sauvegarde</h2>
+      <p class="muted" style="margin:0">Exportez toute votre cave (caves, casiers, vins, historique et photos) dans un fichier. Vous pouvez ensuite l'importer ici ou dans l'application installée sur un autre appareil.</p>
+      <div class="actions"><button id="bk-export">Exporter ma cave</button><label class="btn" for="bk-import" role="button" tabindex="0">Importer</label><input type="file" id="bk-import" accept="application/json,.json" class="vh"></div>
+      <div id="bk-msg" aria-live="polite"></div></section>
+    <section class="card" id="ai-set" hidden><h2>Claude dans l'application</h2>
+      <p class="muted" style="margin:0">« Que boire ce soir ? » et « Scanner l'étiquette » utilisent Claude. Dans l'application installée, il faut votre propre clé API Anthropic (console.anthropic.com, facturée à l'usage). Elle reste uniquement sur cet appareil et n'est envoyée qu'à api.anthropic.com.</p>
+      <label for="ai-key">Clé API<input id="ai-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
+      <div class="actions"><button class="primary" id="ai-save">Enregistrer</button><button id="ai-del">Retirer la clé</button></div><div id="ai-msg" class="muted"></div></section>
+    <section class="card" id="install-help" hidden><h2>Installer l'application</h2>
+      <p class="muted" style="margin:0">Sur iPhone : bouton Partager puis « Sur l'écran d'accueil ». Sur Android : menu ⋮ puis « Installer l'application ». Sur ordinateur (Chrome, Edge) : l'icône d'installation dans la barre d'adresse.</p>
+      <p class="muted" style="margin:0">Vos données restent sur cet appareil. Pensez à exporter une sauvegarde de temps en temps.</p></section>
   </section>
 </main>
 <div id="sheet-root"></div>
@@ -1285,7 +1316,74 @@ function openWine(id) {
 }
 /* Photos: wine field `labels` = up to two asset ids [étiquette, contre-étiquette]. */
 const PHOTO_SLOTS = ["Étiquette", "Contre-étiquette"];
-const blobUrl = id => "/_blob/" + encodeURIComponent(id);
+/* ---------- Installed app (PWA) outside claude.ai: same API as window.claude, stored on the device ---------- */
+const LOCAL = !window.claude;
+const BLOBS = new Map(); // asset id -> object URL (local mode)
+const Local = (() => {
+  let dbp = null; const docs = new Map(); const subs = new Set();
+  const idb = () => dbp || (dbp = new Promise((ok, ko) => { const r = indexedDB.open("cave-a-vin", 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore("docs"); r.result.createObjectStore("blobs"); }; r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); }));
+  const run = async (store, mode, fn) => { const d = await idb(); return new Promise((ok, ko) => { const t = d.transaction(store, mode); const req = fn(t.objectStore(store)); t.oncomplete = () => ok(req && req.result); t.onerror = () => ko(t.error); t.onabort = () => ko(t.error); }); };
+  const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), b => "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36]).join("");
+  const copy = o => o == null ? o : JSON.parse(JSON.stringify(o));
+  const colOf = path => path.split("/").slice(0, -1).join("/");
+  const snapCol = q => { let ds = [...docs.entries()].filter(([k]) => colOf(k) === q.col).map(([k, v]) => ({ id: k.split("/").pop(), v }));
+    if (q.ord) ds.sort((a, b) => { const x = a.v[q.ord[0]] ?? "", y = b.v[q.ord[0]] ?? ""; return (x < y ? -1 : x > y ? 1 : 0) * (q.ord[1] === "desc" ? -1 : 1); });
+    if (q.lim) ds = ds.slice(0, q.lim);
+    return { docs: ds.map(d => ({ id: d.id, exists: true, data: () => copy(d.v) })), size: ds.length, empty: !ds.length }; };
+  const snapDoc = path => { const v = docs.get(path); return { id: path.split("/").pop(), exists: v !== undefined, data: () => copy(v) }; };
+  const fire = path => { for (const s of subs) { try { if (s.doc ? s.doc === path : s.q.col === colOf(path)) s.cb(s.doc ? snapDoc(s.doc) : snapCol(s.q)); } catch (e) { console.error(e); } } };
+  const put = async (path, v) => { docs.set(path, copy(v)); fire(path); await run("docs", "readwrite", st => st.put(copy(v), path)); };
+  const del = async path => { docs.delete(path); fire(path); await run("docs", "readwrite", st => st.delete(path)); };
+  const query = q => ({ orderBy: (f, dir) => query({ ...q, ord: [f, dir || "asc"] }), limit: n => query({ ...q, lim: n }),
+    onSnapshot(cb) { const s = { q, cb }; subs.add(s); setTimeout(() => cb(snapCol(q))); return () => subs.delete(s); },
+    async add(data) { const id = rid(); await put(q.col + "/" + id, data); return { id }; }, doc: id => docRef(q.col + "/" + id) });
+  const docRef = path => ({ id: path.split("/").pop(),
+    onSnapshot(cb) { const s = { doc: path, cb }; subs.add(s); setTimeout(() => cb(snapDoc(path))); return () => subs.delete(s); },
+    async set(data, o) { await put(path, o && o.merge ? { ...(docs.get(path) || {}), ...data } : data); },
+    async update(patch) { if (!docs.has(path)) throw new Error("document introuvable"); await put(path, { ...docs.get(path), ...patch }); },
+    async delete() { await del(path); } });
+  async function init() {
+    const [keys, vals] = await Promise.all([run("docs", "readonly", st => st.getAllKeys()), run("docs", "readonly", st => st.getAll())]);
+    keys.forEach((k, i) => docs.set(k, vals[i]));
+    const [bk, bv] = await Promise.all([run("blobs", "readonly", st => st.getAllKeys()), run("blobs", "readonly", st => st.getAll())]);
+    bk.forEach((k, i) => BLOBS.set(k, URL.createObjectURL(bv[i])));
+    if (![...docs.keys()].some(k => colOf(k) === "cellars")) await put("cellars/ma-cave", { name: "Ma cave", order: 0 });
+  }
+  const db = { collection: col => query({ col }), doc: docRef };
+  const assets = { async upload(blob, o) { const id = rid() + rid(); const b = blob.type ? blob : new Blob([blob], { type: (o && o.type) || "image/jpeg" });
+      await run("blobs", "readwrite", st => st.put(b, id)); const url = URL.createObjectURL(b); BLOBS.set(id, url); return { id, url }; } };
+  return { init, db, assets };
+})();
+/* Claude in the installed app: the person's own Anthropic API key, kept only on this device */
+const KEY_LS = "cave.anthropicKey";
+const apiKey = () => { try { return localStorage.getItem(KEY_LS) || ""; } catch (e) { return ""; } };
+function localSample() {
+  const toB64 = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = ko; r.readAsDataURL(b); });
+  const call = async (input, o = {}) => {
+    const content = [];
+    for (const im of [].concat(o.images || [])) content.push({ type: "image", source: { type: "base64", media_type: im.type || "image/jpeg", data: await toB64(im) } });
+    content.push({ type: "text", text: input });
+    let res;
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: o.signal,
+        headers: { "content-type": "application/json", "x-api-key": apiKey(), "anthropic-version": "2026-10-21", "anthropic-beta": "server-side-fallback-2026-07-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-opus-5-5", max_tokens: 16000, fallbacks: "default", messages: [{ role: "user", content }] }) });
+    } catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "upstream_error", message: String(e) }; }
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw { code: res.status === 401 || res.status === 403 ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 413 ? "prompt_too_large" : "upstream_error", message: j.error && j.error.message || res.statusText };
+    if (j.stop_reason === "refusal") throw { code: "refused", message: "refusal" };
+    const text = (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    if (!text) throw { code: "empty_completion", message: "" };
+    return { text, truncated: j.stop_reason === "max_tokens" };
+  };
+  const fn = (input, o) => call(input, o);
+  fn.json = async (input, o) => { const { text } = await call(input + "\n\nRéponds uniquement avec le JSON, sans texte autour.", o);
+    const m = text.match(/[\[{][\s\S]*[\]}]/); try { return JSON.parse(m ? m[0] : text); } catch (e) { throw { code: "invalid_json", message: "", text }; } };
+  fn.limits = async () => ({ maxPromptBytes: 262144, images: { maxCount: 5, maxInputBytes: 5e6, mediaTypes: ["image/jpeg", "image/png", "image/webp"] } });
+  return fn;
+}
+const blobUrl = id => LOCAL ? (BLOBS.get(id) || "") : "/_blob/" + encodeURIComponent(id);
 const labelsOf = w => (Array.isArray(w.labels) ? w.labels : w.label ? [w.label] : []).filter(Boolean);
 function labelPic(w) { const ls = labelsOf(w); return ls.length ? `<div class="labelpics n${ls.length}">${ls.map((id, i) => `<img class="labelpic" src="${blobUrl(id)}" alt="${PHOTO_SLOTS[i] || "Photo"} de ${esc(w.name)}" onerror="this.remove()">`).join("")}</div>` : ""; }
 function wireLabelPic() { document.querySelectorAll(".sheet .labelpic").forEach(i => i.onclick = () => { const big = !i.classList.contains("big"); document.querySelectorAll(".sheet .labelpic").forEach(x => x.classList.remove("big")); i.classList.toggle("big", big); i.parentNode.classList.toggle("zoom", big); }); }
@@ -1490,7 +1588,7 @@ function openRackForm(rk, cellarId) {
 }
 
 /* ---------- Claude on the page (sample): pairing and label reading ---------- */
-const SAMPLE_ERR = { rate_limited: "Trop de demandes pour l'instant, réessayez dans un moment.", session_expired: "Reconnectez-vous à claude.ai puis réessayez.",
+const SAMPLE_ERR = { bad_key: "Clé API Claude refusée : vérifiez-la dans les Réglages.", rate_limited: "Trop de demandes pour l'instant, réessayez dans un moment.", session_expired: "Reconnectez-vous à claude.ai puis réessayez.",
   image_rejected: "Cette photo ne passe pas, essayez-en une autre.", refused: "Claude n'a pas pu répondre à cette demande.", empty_completion: "Pas de réponse, reformulez.",
   invalid_json: "Réponse illisible, réessayez.", upstream_error: "Connexion interrompue, réessayez.", prompt_too_large: "Trop de vins à analyser d'un coup." };
 const sampleMsg = e => SAMPLE_ERR[e && e.code] || "Indisponible pour l'instant.";
@@ -1597,6 +1695,61 @@ function renderStats() {
   root.querySelectorAll("[data-dk]").forEach(b => b.onclick = () => openTasting(b.dataset.dk));
 }
 
+/* ---------- Backup: export / import the whole cellar as one JSON file ---------- */
+const blobToDataURL = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = ko; r.readAsDataURL(b); });
+async function exportCave() {
+  const strip = o => { const { id, ...r } = o; return [id, r]; };
+  const photos = {}, ids = new Set(S.wines.flatMap(w => labelsOf(w)));
+  for (const id of ids) { try { const r = await fetch(blobUrl(id)); if (r.ok) photos[id] = await blobToDataURL(await r.blob()); } catch (e) {} }
+  const out = { app: "cave-a-vin", format: 1, exportedAt: new Date().toISOString(), settings: { display: { cellarId: S.cellarId || curId() || null } },
+    cellars: Object.fromEntries(S.cellars.map(strip)), racks: Object.fromEntries(S.racks.map(strip)), wines: Object.fromEntries(S.wines.map(strip)),
+    drunk: Object.fromEntries(S.drunkAll.map(strip)), photos };
+  return { json: JSON.stringify(out), nPhotos: Object.keys(photos).length, nMissing: ids.size - Object.keys(photos).length };
+}
+async function importCave(file, msg) {
+  let d; try { d = JSON.parse(await file.text()); } catch (e) { msg("Ce fichier n'est pas une sauvegarde lisible."); return; }
+  if (!d || d.app !== "cave-a-vin") { msg("Ce fichier n'est pas une sauvegarde de Cave à vin."); return; }
+  const map = {}; let ph = 0, phFail = 0;
+  if (d.photos && S.assets) for (const [old, url] of Object.entries(d.photos)) {
+    try { const b = await (await fetch(url)).blob(); map[old] = (await S.assets.upload(b, { type: b.type || "image/jpeg" })).id; ph++; } catch (e) { phFail++; }
+    msg(`Import des photos… ${ph}/${Object.keys(d.photos).length}`);
+  }
+  let n = 0;
+  for (const col of ["cellars", "racks", "wines", "drunk"]) for (const [id, v] of Object.entries(d[col] || {})) {
+    const data = { ...v };
+    if (col === "wines") { const ls = (Array.isArray(v.labels) ? v.labels : v.label ? [v.label] : []).map(x => map[x]).filter(Boolean); data.labels = ls; data.label = ls[0] || ""; }
+    await S.db.doc(col + "/" + id).set(data); n++;
+    if (n % 20 === 0) msg(`Import… ${n} éléments`);
+  }
+  if (d.settings && d.settings.display && d.settings.display.cellarId) await S.db.doc("settings/display").set({ cellarId: d.settings.display.cellarId });
+  msg(`Import terminé : ${n} éléments${ph ? ` et ${ph} photo(s)` : ""}.${phFail ? ` ${phFail} photo(s) n'ont pas pu être importées.` : ""}`);
+}
+function wireBackup() {
+  const msg = h => { $("#bk-msg").textContent = h; };
+  $("#bk-export").onclick = async () => {
+    if (!S.ready) return; $("#bk-export").disabled = true; msg("Préparation de la sauvegarde…");
+    try {
+      const { json, nPhotos, nMissing } = await exportCave(), name = "cave-a-vin-" + new Date().toISOString().slice(0, 10) + ".json";
+      if (LOCAL || !S.downloads) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], { type: "application/json" })); a.download = name; document.body.append(a); a.click(); a.remove(); }
+      else await S.downloads.save({ filename: name, data: new Blob([json], { type: "application/json" }) });
+      msg(`Sauvegarde prête (${nPhotos} photo(s)${nMissing ? `, ${nMissing} introuvable(s)` : ""}).`);
+    } catch (e) { msg(e && e.code === "declined" ? "" : "Export impossible : " + (e && (e.message || e.code) || e)); }
+    finally { $("#bk-export").disabled = false; }
+  };
+  const lb = document.querySelector("label[for=bk-import]"); lb.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#bk-import").click(); } };
+  $("#bk-import").onchange = async () => { const f = $("#bk-import").files[0]; $("#bk-import").value = ""; if (!f || !S.db) return;
+    try { await importCave(f, msg); } catch (e) { msg("Import interrompu : " + (e && e.message || e)); } };
+  if (LOCAL) {
+    $("#ai-set").hidden = false; $("#install-help").hidden = false;
+    const am = t => { $("#ai-msg").textContent = t; };
+    am(apiKey() ? "Une clé est enregistrée sur cet appareil." : "Aucune clé : les fonctions Claude sont masquées.");
+    $("#ai-save").onclick = () => { const k = $("#ai-key").value.trim(); if (!k) return; try { localStorage.setItem(KEY_LS, k); } catch (e) {} $("#ai-key").value = "";
+      S.sample = localSample(); S.sampleImg = true; wirePairing(); am("Clé enregistrée sur cet appareil."); };
+    $("#ai-del").onclick = () => { try { localStorage.removeItem(KEY_LS); } catch (e) {} S.sample = null; S.sampleImg = false; wirePairing(); am("Clé retirée."); };
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
 /* ---------- Wiring ---------- */
 $("#nav-add").onclick = () => openWineForm(null);
 document.querySelectorAll("nav.tabs button[data-view]").forEach(b => b.onclick = () => { S.view = b.dataset.view; try { localStorage.setItem("cave.view", S.view); } catch (e) {} render(); });
@@ -1629,14 +1782,20 @@ render();
 
 (async () => {
   const timer = setTimeout(() => { if (!S.ready) { S.err = "La cave ne répond pas. Vérifiez la connexion puis rouvrez la page."; $("#sync").textContent = "hors ligne"; render(); } }, 10000);
-  const db = window.claude ? await window.claude.use("db") : null;
+  if (LOCAL) { try { await Local.init(); } catch (e) { clearTimeout(timer); S.err = "Stockage indisponible sur cet appareil (navigation privée ?) : " + (e && e.message || e); $("#sync").textContent = "erreur"; render(); return; } }
+  const db = LOCAL ? Local.db : window.claude ? await window.claude.use("db") : null;
   if (!db) { clearTimeout(timer); S.err = "Connectez-vous à claude.ai pour voir et enregistrer votre cave."; $("#sync").textContent = "non connecté"; render(); return; }
   S.db = db;
-  try { S.assets = await window.claude.use("assets"); } catch (e) { S.assets = null; }
-  try { S.sample = await window.claude.use("sample"); S.sampleImg = S.sample ? !!(await S.sample.limits().catch(() => ({}))).images : false; } catch (e) { S.sample = null; }
+  if (LOCAL) { S.assets = Local.assets; S.sample = apiKey() ? localSample() : null; S.sampleImg = !!S.sample; }
+  else {
+    try { S.assets = await window.claude.use("assets"); } catch (e) { S.assets = null; }
+    try { S.sample = await window.claude.use("sample"); S.sampleImg = S.sample ? !!(await S.sample.limits().catch(() => ({}))).images : false; } catch (e) { S.sample = null; }
+    try { S.downloads = await window.claude.use("downloads"); } catch (e) { S.downloads = null; }
+  }
+  wireBackup();
   wirePairing();
   let got = { racks: false, wines: false, cellars: false };
-  const done = k => { got[k] = true; if (got.racks && got.wines && got.cellars) { clearTimeout(timer); S.ready = true; S.err = ""; $("#sync").textContent = "à jour"; } render(); };
+  const done = k => { got[k] = true; if (got.racks && got.wines && got.cellars) { clearTimeout(timer); S.ready = true; S.err = ""; $("#sync").textContent = LOCAL ? "sur cet appareil" : "à jour"; } render(); };
   const fail = e => { clearTimeout(timer); S.err = "Lecture impossible : " + (e && e.message || "erreur inconnue"); $("#sync").textContent = "erreur"; render(); };
   db.collection("cellars").onSnapshot(s => { S.cellars = s.docs.map(d => ({ id: d.id, ...d.data() })); done("cellars"); }, fail);
   db.doc("settings/display").onSnapshot(s => { const id = s.exists ? s.data()?.cellarId : null; if (id && id !== S.cellarId) { S.cellarId = id; S.highlight = null; S.move = null; render(); } }, () => {});
@@ -1645,3 +1804,6 @@ render();
   db.collection("drunk").orderBy("at", "desc").onSnapshot(s => { S.drunkAll = s.docs.map(d => ({ id: d.id, ...d.data() })); S.drunk = S.drunkAll.slice(0, 30); renderInventory(); if (S.view === "bilan") renderStats(); }, () => {});
 })();
 </script>
+
+</body>
+</html>
