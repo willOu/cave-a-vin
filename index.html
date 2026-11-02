@@ -227,6 +227,13 @@ input, select, textarea { font: inherit; color: var(--fg); background: var(--sur
 .pick { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
 .pick button { display: flex; gap: 10px; align-items: center; text-align: left; font-weight: 500; }
 .pick button span.grow { flex: 1; }
+.toast button { margin-left: 12px; padding: 2px 10px; font-size: .85rem; }
+.fav { font-size: 1.25rem; line-height: 1; padding: 4px 8px; color: var(--muted); }
+.fav[aria-pressed="true"] { color: #e0607e; }
+.heart { color: #e0607e; font-size: .85em; }
+.stepper { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stepper button { min-width: 44px; font-size: 1.2rem; padding: 4px 0; }
+.stepper output { font: 400 1.5rem/1 var(--f-display); min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 30; font-weight: 600; font-size: .9rem; }
 @media (prefers-reduced-motion: no-preference) { .cell { transition: transform .12s; } .cell:hover { transform: scale(1.08); } }
 
@@ -502,12 +509,15 @@ input.filled, select.filled { border-color: var(--gold); }
 
   <section id="view-inventaire" hidden style="display:grid;gap:16px">
     <div class="toolbar">
-      <input id="q" type="search" placeholder="Chercher un vin, domaine, appellation, millésime…" class="grow" style="flex:1 1 240px">
+      <input id="q" type="search" placeholder="Chercher dans toutes les caves : vin, domaine, ville, caviste…" class="grow" style="flex:1 1 240px">
       <select id="sort" style="width:auto">
         <option value="name">Trier par nom</option>
         <option value="vintage">Par millésime</option>
         <option value="drink">Par date de garde</option>
         <option value="count">Par quantité</option>
+        <option value="price">Par prix</option>
+        <option value="fav">Coups de cœur d'abord</option>
+        <option value="bought">Achats récents</option>
       </select>
       <button class="primary" id="btn-add-wine">+ Ajouter un vin</button>
     </div>
@@ -684,7 +694,19 @@ function drinkState(w) {
   if (a || b) return ["now", "À boire" + (b ? " → " + b : "")];
   return null;
 }
-function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; $("#toast-root").replaceChildren(t); setTimeout(() => t.remove(), 2600); }
+function toast(msg, action, fn) { const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  if (action) { const b = document.createElement("button"); b.type = "button"; b.textContent = action; b.onclick = () => { t.remove(); fn(); }; t.append(b); }
+  $("#toast-root").replaceChildren(t); setTimeout(() => t.remove(), action ? 7000 : 2600); }
+/* Service: temperature and decanting, defaults by colour when the wine has none */
+const SERVE = { rouge: "16–18", blanc: "10–12", rose: "8–10", bulles: "6–8", liquoreux: "8–10", autre: "" };
+const DECANT = [["", "Non précisé"], ["non", "Pas besoin"], ["avant", "Ouvrir 1 h avant"], ["30", "Carafer 30 min"], ["60", "Carafer 1 h"], ["120", "Carafer 2 h"]];
+function serviceOf(w) {
+  const t = String(w.serveTemp || "").trim(), d = (DECANT.find(x => x[0] === w.decant) || DECANT[0]);
+  const temp = t ? t.replace(/\s*°?\s*C?$/i, "") + " °C" : SERVE[w.color || "autre"] ? SERVE[w.color || "autre"] + " °C (conseillé)" : "";
+  return [temp, d[0] ? d[1].toLowerCase() : ""].filter(Boolean).join(" · ");
+}
+const frDate = s => s ? new Date(s + (s.length === 10 ? "T12:00" : "")).toLocaleDateString("fr-FR") : "";
+const sameWine = (a, b) => norm(a.name).trim() === norm(b.name).trim() && String(a.vintage || "") === String(b.vintage || "") && (!a.domain || !b.domain || norm(a.domain).trim() === norm(b.domain).trim());
 async function save(fn, okMsg) {
   if (!S.db) { toast("Enregistrement impossible : ouvrez la page connecté à claude.ai."); return false; }
   try { await fn(); if (okMsg) toast(okMsg); return true; }
@@ -1095,6 +1117,7 @@ function renderInventory() {
   f.innerHTML = `<button class="chip" aria-pressed="${!S.filter}" data-f="">Tous</button>` +
     COLORS.filter(([c]) => has.has(c)).map(([c, l]) => `<button class="chip" aria-pressed="${S.filter === c}" data-f="${c}"><span class="dot c-${c}"></span>${l}</button>`).join("") +
     `<button class="chip" aria-pressed="${S.filter === "_drink"}" data-f="_drink">À boire maintenant</button>` +
+    `<button class="chip" aria-pressed="${S.filter === "_fav"}" data-f="_fav"><span class="heart">♥</span> Coups de cœur</button>` +
     `<button class="chip" aria-pressed="${S.filter === "_empty"}" data-f="_empty">Épuisés</button>` +
     (S.bassin && S.mapMode !== "bues" ? `<button class="chip" aria-pressed="true" data-bx="1">${esc(bassinName(S.bassin, true))} ✕</button>` : "") +
     (S.town && S.mapMode !== "bues" ? `<button class="chip" aria-pressed="true" data-bx="1">${esc(S.town.split("|")[0])} ✕</button>` : "");
@@ -1104,29 +1127,34 @@ function renderInventory() {
   const q = S.q.trim().toLowerCase();
   let ws = S.wines.filter(w => {
     if (S.filter === "_empty") { if (total(w) || wineCellar(w) !== curId()) return false; }
-    else if (!count(w)) return false;
+    else if (!count(w) && !(q && total(w))) return false;
+    if (S.filter === "_fav" && !w.fav) return false;
     if (S.filter === "_drink") { const d = drinkState(w); if (!d || d[0] === "wait") return false; }
     else if (S.filter && S.filter[0] !== "_" && (w.color || "autre") !== S.filter) return false;
     if (S.mapMode !== "bues" && S.bassin && bassinOf(w) !== S.bassin) return false;
     if (S.mapMode !== "bues" && S.town && !(hasTown(w) && townKey(w) === S.town)) return false;
-    if (q && ![w.name, w.domain, w.appellation, w.region, w.grapes, w.vintage, w.notes].join(" ").toLowerCase().includes(q)) return false;
+    if (q && !norm([w.name, w.domain, w.appellation, w.region, w.grapes, w.vintage, w.notes, w.town, w.shop, w.ean, colorLabel(w.color), bassinName(bassinOf(w))].join(" ")).includes(norm(q).trim())) return false;
     return true;
   });
   const by = { name: (a, b) => (a.name || "").localeCompare(b.name || ""), vintage: (a, b) => (+a.vintage || 9999) - (+b.vintage || 9999),
-    drink: (a, b) => (+a.drinkUntil || 9999) - (+b.drinkUntil || 9999), count: (a, b) => count(b) - count(a) };
-  ws.sort(by[S.sort]);
+    drink: (a, b) => (+a.drinkUntil || 9999) - (+b.drinkUntil || 9999), count: (a, b) => count(b) - count(a),
+    price: (a, b) => (+b.price || 0) - (+a.price || 0), fav: (a, b) => !!b.fav - !!a.fav || by.name(a, b),
+    bought: (a, b) => (b.boughtAt || b.createdAt || "").localeCompare(a.boughtAt || a.createdAt || "") };
+  ws.sort((a, b) => by[S.sort](a, b) || by.name(a, b));
   const list = $("#list");
   if (!S.ready) list.innerHTML = `<div class="empty">${S.err ? esc(S.err) : "Chargement…"}</div>`;
   else if (!ws.length) list.innerHTML = `<div class="empty">${S.wines.some(w => count(w)) ? "Aucun vin ne correspond." : "<strong>Cette cave est vide.</strong><span>Ajoutez votre premier vin, puis rangez-le dans un casier.</span>"}</div>`;
   else list.innerHTML = ws.map(w => {
     const d = drinkState(w);
     const lz = wineCellar(w) === curId() ? +w.loose || 0 : 0;
-    const locs = slotsIn(w, curId()).sort().map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("") + (lz ? `<span class="loc">${lz} non rangée${lz > 1 ? "s" : ""}</span>` : "");
+    const here = count(w), elsewhere = !here && total(w);
+    const locs = elsewhere ? [...new Set([...(w.slots || []).map(slotCellar), ...(+w.loose ? [wineCellar(w)] : [])])].map(id => `<span class="loc">Cave : ${esc(S.cellars.find(c => c.id === id)?.name || "?")}</span>`).join("")
+      : slotsIn(w, curId()).sort().map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("") + (lz ? `<span class="loc">${lz} non rangée${lz > 1 ? "s" : ""}</span>` : "");
     return `<button class="wine" data-w="${w.id}"><span class="yr">${esc(w.vintage || "NM")}${labelsOf(w).length ? `<img class="thumb" src="${blobUrl(labelsOf(w)[0])}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>
-      <span class="mid"><span class="name"><span class="dot c-${w.color || "autre"}"></span>${esc(w.name)}</span>
+      <span class="mid"><span class="name"><span class="dot c-${w.color || "autre"}"></span>${esc(w.name)}${w.fav ? ` <span class="heart" aria-label="Coup de cœur">♥</span>` : ""}</span>
       <span class="sub">${esc([w.domain, w.appellation, w.region].filter(Boolean).join(" · "))}</span>
       ${d ? `<span class="pill ${d[0]}">${d[1]}</span>` : ""}</span>
-      <span class="count">${count(w)}</span>
+      <span class="count">${elsewhere ? total(w) : here}</span>
       ${locs ? `<span class="locs">${locs}</span>` : ""}</button>`;
   }).join("");
   list.querySelectorAll("[data-w]").forEach(b => b.onclick = () => openWine(b.dataset.w));
@@ -1236,7 +1264,8 @@ function openSlot(k, w) {
 }
 function facts(w) {
   const rows = [["Couleur", colorLabel(w.color)], ["Ville", w.town ? townLabel(w) : ""], ["Bassin", bassinName(bassinOf(w))], ["Cépages", w.grapes], ["Garde", [w.drinkFrom, w.drinkUntil].filter(Boolean).join(" → ")],
-    ["Prix", w.price ? w.price + " €" : ""], ["Bouteilles", count(w) === total(w) ? count(w) : count(w) + " ici, " + total(w) + " au total"], ["Notes", w.notes]].filter(r => r[1] !== "" && r[1] != null);
+    ["Service", serviceOf(w)],
+    ["Prix", w.price ? w.price + " €" : ""], ["Achat", [w.shop, frDate(w.boughtAt)].filter(Boolean).join(", le ")], ["Bouteilles", count(w) === total(w) ? count(w) : count(w) + " ici, " + total(w) + " au total"], ["Notes", w.notes]].filter(r => r[1] !== "" && r[1] != null);
   return `<dl class="facts">${rows.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>`;
 }
 /* Tasting notes on a drunk bottle: rating 1-5, dish, comment */
@@ -1257,9 +1286,11 @@ function openTasting(id) {
   const d = S.drunkAll.find(x => x.id === id); if (!d) return;
   sheet(`<header><span class="dot c-${d.color || "autre"}" style="width:18px;height:18px;margin-top:4px"></span><div><div class="label">Bue le ${esc(new Date(d.at).toLocaleDateString("fr-FR"))}${d.from ? " · " + esc(d.from) : ""}</div><h2>${esc(d.name)} ${esc(d.vintage || "")}</h2>${d.domain ? `<div class="muted">${esc(d.domain)}</div>` : ""}</div><button class="ghost" data-close aria-label="Fermer">✕</button></header>
     ${tastingFields("tn", d)}
-    <div class="actions"><button class="primary" id="tn-save">Enregistrer</button><button data-close>Annuler</button><button class="danger" id="tn-del" style="margin-left:auto">Retirer de l'historique</button></div><div id="tn-msg"></div>`, () => {
+    <div class="actions"><button class="primary" id="tn-save">Enregistrer</button><button data-close>Annuler</button><button id="tn-back">Remettre en cave</button><button class="danger" id="tn-del" style="margin-left:auto">Retirer de l'historique</button></div><div id="tn-msg"></div>`, () => {
     wireTasting("tn");
     $("#tn-save").onclick = () => { const t = readTasting("tn"); close(); save(() => S.db.doc("drunk/" + d.id).update(t), "Dégustation enregistrée"); };
+    $("#tn-back").onclick = () => { $("#tn-msg").innerHTML = `<div class="banner"><p>Bue par erreur ? La bouteille retourne ${d.slot && !occupancy().has(d.slot) && rackById(d.slot.split("|")[0]) ? "à sa place (" + esc(slotLabel(d.slot)) + ")" : "dans la cave, en non rangée"}, et sort de l'historique.</p><button class="primary" id="tn-back-ok">Remettre en cave</button></div>`;
+      $("#tn-back-ok").onclick = () => { close(); restoreDrunk(d); }; };
     $("#tn-del").onclick = () => { $("#tn-msg").innerHTML = `<div class="banner"><p>Retirer cette bouteille de l'historique ? Le vin n'est pas remis en cave.</p><button class="danger" id="tn-del-ok">Retirer</button></div>`;
       $("#tn-del-ok").onclick = () => { close(); save(() => S.db.doc("drunk/" + d.id).delete(), "Retirée de l'historique"); }; };
   });
@@ -1267,8 +1298,22 @@ function openTasting(id) {
 async function drink(w, k, t) {
   const ref = S.db && S.db.doc("wines/" + w.id);
   const patch = k ? { slots: (w.slots || []).filter(s => s !== k) } : { loose: Math.max(0, (+w.loose || 0) - 1) };
-  const ok = await save(() => ref.update(patch), "Santé ! Bouteille retirée de la cave");
-  if (ok) S.db.collection("drunk").add({ cellarId: k ? slotCellar(k) : wineCellar(w), wineId: w.id, name: w.name, vintage: w.vintage || "", color: w.color || "autre", domain: w.domain || "", bassin: bassinOf(w) || "", ...(hasTown(w) ? { town: w.town, townDep: w.townDep || "", lat: w.lat, lon: w.lon } : {}), at: new Date().toISOString(), from: k ? slotLabel(k) : "non rangée", ...(t || {}) }).catch(() => {});
+  const ok = await save(() => ref.update(patch));
+  if (!ok) return;
+  const data = { cellarId: k ? slotCellar(k) : wineCellar(w), wineId: w.id, name: w.name, vintage: w.vintage || "", color: w.color || "autre", domain: w.domain || "", bassin: bassinOf(w) || "", ...(hasTown(w) ? { town: w.town, townDep: w.townDep || "", lat: w.lat, lon: w.lon } : {}), at: new Date().toISOString(), from: k ? slotLabel(k) : "non rangée", slot: k || "", ...(t || {}) };
+  let id = null; try { id = (await S.db.collection("drunk").add(data)).id; } catch (e) {}
+  toast("Santé ! Bouteille retirée de la cave", "Annuler", () => restoreDrunk({ ...data, id }));
+}
+/* Undo a drunk bottle: back to its place if still free, otherwise as an unplaced bottle; the wine is recreated if it was deleted */
+async function restoreDrunk(d) {
+  const w = S.wines.find(x => x.id === d.wineId);
+  const slotOk = d.slot && rackById(d.slot.split("|")[0]) && !occupancy().has(d.slot);
+  const msg = slotOk ? "Bouteille remise en " + slotLabel(d.slot) : "Bouteille remise en cave (non rangée)";
+  let ok;
+  if (w) ok = await save(() => S.db.doc("wines/" + w.id).update(slotOk ? { slots: (w.slots || []).concat(d.slot) } : { loose: (+w.loose || 0) + 1 }), msg);
+  else ok = await save(() => S.db.collection("wines").add({ name: d.name, vintage: d.vintage || "", color: d.color || "autre", domain: d.domain || "", bassin: d.bassin || "",
+    ...(d.town ? { town: d.town, townDep: d.townDep || "", lat: d.lat, lon: d.lon } : {}), slots: slotOk ? [d.slot] : [], loose: slotOk ? 0 : 1, cellarId: d.cellarId || curId() || null, createdAt: new Date().toISOString() }), msg);
+  if (ok && d.id) await S.db.doc("drunk/" + d.id).delete().catch(() => {});
 }
 function openPlace(k) {
   const here = w => wineCellar(w) === curId();
@@ -1297,9 +1342,11 @@ function openWine(id) {
   const w = S.wines.find(x => x.id === id); if (!w) return;
   sheet(`<header><span class="dot c-${w.color || "autre"}" style="width:18px;height:18px;margin-top:4px"></span><div>
       <h2>${esc(w.name)} ${esc(w.vintage || "")}</h2><div class="muted">${esc([w.domain, w.appellation, w.region].filter(Boolean).join(" · "))}</div></div>
+      <button class="ghost fav" id="w-fav" aria-pressed="${!!w.fav}" aria-label="Coup de cœur" title="Coup de cœur">${w.fav ? "♥" : "♡"}</button>
       <button class="ghost" data-close aria-label="Fermer">✕</button></header>
     ${labelPic(w)}
     ${facts(w)}
+    <div class="stepper"><span class="label">Bouteilles non rangées</span><button type="button" id="w-minus" aria-label="Retirer une bouteille non rangée">−</button><output id="w-loose" aria-live="polite">${+w.loose || 0}</output><button type="button" id="w-plus" aria-label="Ajouter une bouteille non rangée">+</button></div>
     ${(w.slots || []).length ? `<div class="chips">${[...w.slots].sort((a, b) => (slotCellar(a) !== curId()) - (slotCellar(b) !== curId()) || a.localeCompare(b)).map(k => `<span class="loc">${esc(slotLabel(k))}</span>`).join("")}</div>` : ""}
     <div class="actions">
       ${slotsIn(w, curId()).length ? `<button class="primary" id="w-show">Voir dans la cave</button>` : ""}
@@ -1308,6 +1355,12 @@ function openWine(id) {
       <button id="w-edit">Modifier</button>
     </div>`, () => {
     wireLabelPic();
+    { let fav = !!w.fav, loose = +w.loose || 0, tm = null; const fb = $("#w-fav"), out = $("#w-loose");
+      fb.onclick = () => { fav = !fav; fb.setAttribute("aria-pressed", fav); fb.textContent = fav ? "♥" : "♡"; save(() => S.db.doc("wines/" + w.id).update({ fav }), fav ? "Ajouté aux coups de cœur" : "Retiré des coups de cœur"); };
+      const step = n => { if (loose + n < 0) { toast("Aucune bouteille non rangée. Les bouteilles rangées se retirent depuis leur casier."); return; }
+        loose += n; out.textContent = loose; $("#w-minus").disabled = !loose;
+        clearTimeout(tm); tm = setTimeout(() => save(() => S.db.doc("wines/" + w.id).update({ loose }), loose + " bouteille" + (loose > 1 ? "s" : "") + " non rangée" + (loose > 1 ? "s" : "")), 500); };
+      $("#w-minus").disabled = !loose; $("#w-minus").onclick = () => step(-1); $("#w-plus").onclick = () => step(1); }
     $("#w-photo") && ($("#w-photo").onclick = () => openWineForm(w, null, true));
     $("#w-show") && ($("#w-show").onclick = () => { close(); S.highlight = w.id; S.move = null; S.view = "cave"; render(); window.scrollTo({ top: 0 }); });
     $("#w-drink") && ($("#w-drink").onclick = () => confirmDrink(w, null));
@@ -1428,6 +1481,10 @@ function openWineForm(w, placeAt, focusPhoto) {
       ${f("f-drinkFrom", "À boire à partir de", "number", 'min="1900" max="2150" inputmode="numeric"')}
       ${f("f-drinkUntil", "À boire avant", "number", 'min="1900" max="2150" inputmode="numeric"')}
       ${f("f-price", "Prix par bouteille (€)", "number", 'min="0" step="0.01" inputmode="decimal"')}
+      ${f("f-shop", "Caviste / lieu d'achat", "text", 'placeholder="ex. Cave du marché"')}
+      ${f("f-boughtAt", "Date d'achat", "date")}
+      <label for="f-serveTemp">Température de service (°C) <span class="muted" id="f-temp-hint" style="font-weight:400"></span><input id="f-serveTemp" value="${esc(v.serveTemp || "")}" placeholder="${esc(SERVE[v.color || "rouge"] || "")}" inputmode="decimal"></label>
+      <label for="f-decant">Carafage<select id="f-decant">${DECANT.map(([d, l]) => `<option value="${d}" ${(v.decant || "") === d ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label for="f-loose">Bouteilles non rangées<input id="f-loose" type="number" min="0" inputmode="numeric" value="${+v.loose || 0}"></label>
       <label class="full" for="f-notes">Notes<textarea id="f-notes" rows="2">${esc(v.notes || "")}</textarea></label>
       ${S.assets ? `<div class="full"><span class="label" style="display:block;margin-bottom:6px">Photos (2 au maximum)</span><div class="photos">${PHOTO_SLOTS.map((t, i) => `<div class="photo-field">
@@ -1465,6 +1522,8 @@ function openWineForm(w, placeAt, focusPhoto) {
       showHint(); }
     if (v.bassin) { bsel.value = v.bassin; bsel.dataset.touched = "1"; } else autoB();
     bsel.onchange = () => { bsel.dataset.touched = "1"; hint.textContent = ""; };
+    const tempPh = () => { const d = SERVE[$("#f-color").value] || ""; $("#f-serveTemp").placeholder = d; $("#f-temp-hint").textContent = d ? "· conseillé " + d : ""; };
+    $("#f-color").addEventListener("change", tempPh); tempPh();
     ["appellation", "region", "name", "domain"].forEach(id => $("#f-" + id).addEventListener("input", autoB));
     // Each slot holds an existing asset id (string), a new picture (Blob) or nothing (null).
     const photos = [0, 1].map(i => labelsOf(v)[i] || null); let photosTouched = false;
@@ -1479,7 +1538,7 @@ function openWineForm(w, placeAt, focusPhoto) {
       };
       del.onclick = () => { photos[i] = null; photosTouched = true; prev.textContent = PHOTO_SLOTS[i]; del.hidden = true; btn.textContent = "Prendre / choisir"; fp.value = ""; };
     });
-    let ean = v.ean || "";
+    let ean = v.ean || "", forceNew = false;
     const msg = h => { $("#f-scan-msg").innerHTML = h; };
     ["f-scan", "f-bar"].forEach(id => { const lb = document.querySelector(`label[for=${id}]`); if (lb) lb.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#" + id).click(); } }; });
     $("#f-bar").onchange = async () => {
@@ -1519,8 +1578,22 @@ function openWineForm(w, placeAt, focusPhoto) {
       const g = id => $("#f-" + id).value.trim();
       const data = { name: g("name"), domain: g("domain"), vintage: g("vintage"), appellation: g("appellation"), region: g("region"), bassin: g("bassin"), color: g("color"),
         grapes: g("grapes"), drinkFrom: g("drinkFrom"), drinkUntil: g("drinkUntil"), price: g("price"), loose: Math.max(0, parseInt(g("loose")) || 0), notes: g("notes"),
-        town: town ? town.town : "", townDep: town ? town.townDep : "", lat: town ? town.lat : "", lon: town ? town.lon : "", ean };
+        town: town ? town.town : "", townDep: town ? town.townDep : "", lat: town ? town.lat : "", lon: town ? town.lon : "", ean,
+        shop: g("shop"), boughtAt: g("boughtAt"), serveTemp: g("serveTemp"), decant: g("decant") };
       if (!data.name) return;
+      const dup = !w && !forceNew && S.wines.find(x => sameWine(x, data));
+      if (dup) {
+        const n = total(dup);
+        $("#f-confirm").innerHTML = `<div class="banner" role="alert"><p><strong>${esc(dup.name)} ${esc(dup.vintage || "")}</strong>${dup.domain ? " (" + esc(dup.domain) + ")" : ""} est déjà dans votre cave, avec ${n} bouteille${n > 1 ? "s" : ""}. Ajouter ${placeAt ? "cette bouteille" : (data.loose || 1) > 1 ? "ces " + data.loose + " bouteilles" : "cette bouteille"} à ce vin ?</p>
+          <div class="actions"><button class="primary" type="button" id="f-dup-add">Ajouter à ce vin</button><button type="button" id="f-dup-new">Créer une fiche à part</button></div></div>`;
+        $("#f-confirm").scrollIntoView({ block: "center" }); $("#f-dup-add").focus();
+        $("#f-dup-new").onclick = () => { forceNew = true; $("#f-confirm").innerHTML = ""; $("#wf").requestSubmit(); };
+        $("#f-dup-add").onclick = () => { close();
+          const patch = placeAt ? { slots: (dup.slots || []).concat(placeAt), loose: (+dup.loose || 0) + data.loose } : { loose: (+dup.loose || 0) + (data.loose || 1) };
+          for (const k of ["domain", "appellation", "region", "grapes", "drinkFrom", "drinkUntil", "price", "ean", "shop", "boughtAt", "serveTemp", "decant", "town", "townDep", "lat", "lon"]) if (data[k] !== "" && data[k] != null && (dup[k] === "" || dup[k] == null)) patch[k] = data[k];
+          save(() => S.db.doc("wines/" + dup.id).update(patch), placeAt ? "Ajoutée à « " + dup.name + " » et rangée en " + slotLabel(placeAt) : "Ajoutée à « " + dup.name + " »"); };
+        return;
+      }
       const sub = $("#wf button[type=submit]");
       if (photosTouched) {
         sub.disabled = true; sub.textContent = "Envoi des photos…";

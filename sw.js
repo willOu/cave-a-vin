@@ -1,5 +1,5 @@
 // Service worker: works offline, and picks up new versions of the app on the next launch.
-const VERSION = "74a838040e";
+const VERSION = "2f1513598d";
 const SHELL = "cave-shell-" + VERSION;
 const RUNTIME = "cave-runtime";
 const FILES = ["./", "index.html", "communes.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];

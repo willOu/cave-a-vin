@@ -12,8 +12,11 @@ Elle existe en deux versions issues du même fichier :
 - **Plusieurs caves**, choisies dans les Réglages, chacune avec ses casiers (étagères × bouteilles, rangement côte à côte ou en quinconce, deuxième rangée posée sur la première).
 - **Trois vues de la cave** : Étagères (toute la cave d'un coup), Plan (grille) et 3D (cave de service électrique, Three.js).
 - **Déplacer une bouteille** en restant appuyé dessus puis en la glissant. Lâchée sur une place occupée, elle échange sa place avec l'autre bouteille.
-- **Fiche vin** : domaine, ville du producteur, millésime, appellation, région, bassin, couleur, cépages, garde, prix, notes, et jusqu'à deux photos (étiquette, contre-étiquette).
-- **« Bouteille bue »** avec confirmation, note sur 5, plat et commentaire de dégustation. Ces notes se modifient dans l'historique, qui peut aussi être effacé.
+- **Fiche vin** : domaine, ville du producteur, millésime, appellation, région, bassin, couleur, cépages, garde, prix, caviste et date d'achat, température de service (conseillée selon la couleur) et carafage, notes, et jusqu'à deux photos (étiquette, contre-étiquette).
+- **Coups de cœur** ♥ sur la fiche, avec un filtre et un tri dédiés. Boutons + et − pour ajuster les bouteilles non rangées.
+- **Liste des vins** : recherche dans toutes les caves (nom, domaine, ville, caviste, code-barres…), tri par nom, millésime, garde, quantité, prix, coups de cœur ou achats récents.
+- **Doublons** : à l'ajout d'un vin déjà présent (même nom, millésime et domaine), l'appli propose d'ajouter les bouteilles à la fiche existante.
+- **« Bouteille bue »** avec confirmation, note sur 5, plat et commentaire de dégustation. Ces notes se modifient dans l'historique, qui peut aussi être effacé. Une bouteille bue par erreur se remet en cave (bouton « Annuler » juste après, ou « Remettre en cave » dans l'historique) : elle retrouve sa place si elle est libre.
 - **Que boire ce soir ?** : on décrit un plat et Claude choisit jusqu'à 3 bouteilles de la cave, en privilégiant celles à boire.
 - **Bilan** : valeur estimée, prix moyen, répartitions par couleur, garde, bassin et millésime, bouteilles bues par mois, meilleures dégustations.
 - **Scanner l'étiquette** : Claude lit la photo et pré-remplit la fiche (nom, domaine, millésime, appellation, ville, cépages, garde). La photo devient la photo d'étiquette.
